@@ -1,7 +1,7 @@
 # OSCWebMixer2
 A rewrite of [OSCWebMixer](https://github.com/castles/OSCWebMixer) - A server that allows multiple web clients to control their own mix as well as external devices for a DiGiCo sound desk. It currently works with SD Series consoles.
 
-# What makes v2 better?
+## What makes v2 better?
 * This new version uses the same iPad connection that is built into the SD consoles so it means you can use webmixer devices as well as the DiGiCo iPad apps at the same time. In-fact you can use multiple iPad apps simultaneously!
 * All configuration is done in a browser instead of config files
 * Auxilaries and Channels can have icons assigned to them
