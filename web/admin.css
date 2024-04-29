@@ -1,0 +1,440 @@
+*
+{
+	box-sizing: border-box;
+}
+
+div > :first-child
+{
+	margin-top: 0;
+}
+
+div > :last-child
+{
+	margin-bottom: 0;
+}
+
+html,
+body
+{
+	height: 100%;;
+}
+
+body
+{
+	font-family: sans-serif;
+	padding: calc(env(safe-area-inset-top, 0px) + 20px) calc(env(safe-area-inset-right, 0px) + 20px) calc(env(safe-area-inset-bottom, 0px) + 20px) calc(env(safe-area-inset-left, 0px) + 20px);
+	margin: 0;
+	font-size: 16px;
+}
+
+#configForm
+{
+	min-height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+h2
+{
+	margin: 40px 0 15px;
+	font-weight: 400;
+}
+
+label
+{
+	margin: 10px 0 20px;
+	display: block;
+	color: #555;
+}
+
+.tooltip
+{
+	background: #000;
+	color: #FFF;
+	border-radius: 50%;
+	width: 16px;
+	height: 16px;
+	display: inline-block;
+	text-align: center;
+	margin-left: 1ch;
+	font-family: serif;
+}
+
+input:where(:not([type="checkbox"]):not([type="color"]):not([type="image"]))
+{
+	border: 1px solid #ccc;
+	padding: 10px;
+	width: 100%;
+	margin-top: 8px;
+	border-radius: 4px;
+	font-size: 16px;
+}
+
+input[type="image"]
+{
+	width: 42px;
+	height: 42px;
+	border: 1px solid #ccc;
+}
+
+input[type="checkbox"]
+{
+	width: 20px;
+	height: 20px;
+	margin: 0 8px 0 0;
+	vertical-align: bottom;
+}
+
+input:disabled
+{
+	background: #eee;
+}
+
+button
+{
+	padding: 5px 10px;
+	background: #eee;
+	border: 1px solid #ccc;
+	border-radius: 5px;
+	cursor: pointer;
+	color: #333;
+}
+
+#external
+{
+	border: 1px solid #eee;
+	padding: 20px;
+	display: flex;
+	flex-direction: column;
+	margin-bottom: 10px;
+	border-radius: 5px;
+}
+
+#external label
+{
+	min-width: 150px;
+}
+
+.external
+{
+	position: relative;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 20px;
+	padding-right: 50px;
+}
+
+.details
+{
+	padding: 20px;
+	border: 1px solid transparent;
+	flex: 1;
+}
+
+.settings
+{
+	border: 1px dotted #aaa;
+	border-radius: 5px;
+	padding: 20px;
+	flex: 1;
+}
+
+.delete
+{
+	position: absolute;
+	top: 0;
+	right: 0;
+	border-radius: 50%;
+	background-color: #eee;
+	padding: 0;
+	width: 30px;
+	height: 30px;
+}
+
+.external:not(:last-child)
+{
+	border-bottom: 1px dotted #ccc;
+	margin-bottom: 20px;
+	padding-bottom: 20px;
+}
+
+.sticky
+{
+	position: sticky;
+	bottom: 0px;
+	padding: 20px 0 0;
+	background-color: #FFF;
+	border-top: 1px dotted #ccc;
+	margin-top: 30px;
+	display: flex;
+	justify-content: end;
+	margin-top: auto;
+}
+
+.sticky button
+{
+	background: #333;
+	color: #FFF;
+	border-color: #333;
+	padding: 15px 40px;
+}
+
+.list
+{
+	display: grid;
+	gap: 10px;
+	flex-direction: column;
+}
+
+.list > div
+{
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.list label,
+.list input
+{
+	margin: 0;
+}
+
+/*
+.dragTarget
+{
+	position: relative;
+}
+
+.dragTarget::before
+{
+	content: "";
+	display: block;
+	background: #000;
+	height: 2px;
+	width: 100%;
+	position: absolute;
+	top: -6px;
+	left: 0;
+}
+
+.dragging
+{
+	opacity: 0;
+}*/
+
+.donate
+{
+	padding: 20px;
+	background-color: #000;
+	margin-bottom: 20px;
+	color: #FFF;
+	border-radius: 4px;
+	line-height: 1.2;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 15px;
+}
+
+.donate img:last-child
+{
+	display: none;
+}
+
+@media (min-width: 1000px)
+{
+	.donate
+	{
+		text-align: center;
+	}
+
+	.donate img:last-child
+	{
+		display: block;
+	}
+}
+
+section
+{
+	display: none;
+	margin-bottom: 20px;
+}
+
+section.show
+{
+	display: block;
+}
+
+nav
+{
+	display: flex;
+	margin-bottom: 30px;
+	overflow: hidden;
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+	position: relative;
+}
+
+nav::before
+{
+	content: "";
+	background-color: #ccc;
+	width: 100%;
+	height: 1px;
+	position: absolute;
+	bottom: 0;
+	left: 0;
+}
+
+nav a
+{
+	padding: 10px 20px;
+	border: 1px solid #CCC;
+	text-decoration: none;
+	color: #000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1;
+	white-space: nowrap;
+}
+
+nav a:not(:first-child)
+{
+	border-left: 0;
+}
+
+nav a.selected
+{
+	border-bottom: 1px solid #FFF;
+	margin-top: 0px;
+}
+
+#iconDialog > div
+{
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(54px, 1fr));
+	gap: 10px;
+	width: 100%;
+	max-width: 406px;
+}
+
+#iconDialog img
+{
+	border: 1px solid #ccc;
+	padding: 10px;
+	width: 54px;
+	height: 54px;
+	cursor: pointer;
+}
+
+@media (hover:hover)
+{
+	#iconDialog img:hover
+	{
+		box-shadow: 0 0 8px -4px #000;
+	}
+}
+
+dialog
+{
+	border-radius: 10px;
+	outline: none;
+	border: 0;
+}
+
+dialog::backdrop
+{
+	background-color: rgba(0,0,0,.5);
+}
+
+.icon
+{
+	border: 1px solid #CCC;
+	padding: 5px;
+	cursor: pointer;
+}
+
+.notice
+{
+	color: #aaa;
+	text-align: center;
+	border-left: 0;
+	border-right: 0;
+	padding: 20px;
+	background-image: linear-gradient(45deg, #f1f1f1 25%, #f9f9f9 25%, #f9f9f9 50%, #f1f1f1 50%, #f1f1f1 75%, #f9f9f9 75%, #f9f9f9 100%);
+	background-size: 28.28px 28.28px;
+}
+
+.notice a
+{
+	color: #000;
+}
+
+button.up,
+button.down
+{
+	width:44px;
+	height: 44px;
+	position: relative;
+}
+
+button.up::before,
+button.down::before
+{
+	content: "";
+	background-color: #333;
+	width: 16px;
+	height: 10px;
+	position: absolute;
+	top: calc(50% - 5px);
+	left: calc(50% - 8px);
+	clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+}
+
+button.down::before
+{
+	clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
+}
+
+
+@media(hover:hover)
+{
+	.icon:hover
+	{
+		background-color: #eee;
+	}
+
+	button:hover
+	{
+		box-shadow: inset 0 0 100px #0001;
+	}
+
+	.sticky button:hover
+	{
+		box-shadow: inset 0 0 100px #FFF2;
+	}
+
+	.delete:hover
+	{
+		background-color: red;
+		color: #FFF;
+		border-color: red;
+	}
+
+	nav a:not(.selected):hover
+	{
+		background-color: #eee;
+	}
+
+	.donate
+	{
+		text-decoration: none;
+	}
+
+	.donate:hover
+	{
+		text-decoration: underline;
+	}
+}
+

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>OSC Web Mixer Admin</title>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+		<link rel="shortcut icon" href="/images/favicon.ico" type="image/x-icon" />
+		<link rel="apple-touch-icon" href="/images/apple-touch-icon.png" />
+		<link rel="apple-touch-icon" sizes="57x57" href="/images/apple-touch-icon-57x57.png" />
+		<link rel="apple-touch-icon" sizes="72x72" href="/images/apple-touch-icon-72x72.png" />
+		<link rel="apple-touch-icon" sizes="76x76" href="/images/apple-touch-icon-76x76.png" />
+		<link rel="apple-touch-icon" sizes="114x114" href="/images/apple-touch-icon-114x114.png" />
+		<link rel="apple-touch-icon" sizes="120x120" href="/images/apple-touch-icon-120x120.png" />
+		<link rel="apple-touch-icon" sizes="144x144" href="/images/apple-touch-icon-144x144.png" />
+		<link rel="apple-touch-icon" sizes="152x152" href="/images/apple-touch-icon-152x152.png" />
+		<link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-180x180.png" />
+		<link rel="apple-touch-startup-image" href="/images/apple-touch-icon.png">
+		<link rel="stylesheet" href="admin.css">
+	</head>
+	<body>
+		<form id="configForm" method="post" action=""/admin">
+			<nav>
+				<a href="#osc-web-mixer" class="selected">OSC Web Mixer</a>
+				<a href="#mixing-desk">Mixing Desk</a>
+				<a href="#aux">Auxiliaries</a>
+				<a href="#channels">Channels</a>
+				<a href="#additional-devices">Additional Devices</a>
+			</nav>
+
+			<a class="donate" href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=VL5VBHN57FVS2&item_name=OSCWebMixer"><img src="/images/money.svg" width="40" height="40" alt="Money Icon" /> OSCWebMixer is free to use but has taken quite a bit of time to develop. Please consider making a donation if you find it useful and would like to see future&nbsp;development. <img src="/images/money.svg" width="40" height="40" alt="Money Icon" /></a>
+
+			<section id="osc-web-mixer-content" class="show">
+				<label>IP Address <input disabled name="ip_address" /></label>
+				<label>Webserver Port<input type="number" name="server_port" required min="0" max="65353" /></label>
+				<label>OSC Receive Port<input name="osc_port" type="number" min="0" max="65353" /></label>
+				<label><input type="checkbox" name="debug" value="debug" />Show Messages in Console</label>
+			</section>
+
+			<section id="mixing-desk-content">
+				<label>IP Address <input type="text" name="desk_ip" required /></label>
+				<label>Send Port<input type="number" name="desk_send_port" disabled /></label>
+				<label>Receive Port<input type="number" name="desk_port" required min="0" max="65353" /></label>
+			</section>
+
+			<section id="aux-content">
+				<div id="auxiliaries" class="list"></div>
+			</section>
+
+			<section id="channels-content">
+				<div id="channels" class="list"></div>
+			</section>
+
+			<section id="additional-devices-content">
+				<div id="external"></div>
+				<button id="addExternal">+</button>
+			</section>
+
+			<div class="sticky">
+				<button type="submit">Save</button>
+			</div>
+		</form>
+		<dialog id="iconDialog">
+			<div>
+				<img src="data:image/svg+xml;charset=utf8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%3E%3C/svg%3E" width="44" height="44" />
+				<img src="/images/instruments/accordion.svg" width="44" height="44" />
+				<img src="/images/instruments/acoustic-guitar.svg" width="44" height="44" />
+				<img src="/images/instruments/audio-cable.svg" width="44" height="44" />
+				<img src="/images/instruments/banjo.svg" width="44" height="44" />
+				<img src="/images/instruments/bass-guitar.svg" width="44" height="44" />
+				<img src="/images/instruments/cassette-tape.svg" width="44" height="44" />
+				<img src="/images/instruments/conga.svg" width="44" height="44" />
+				<img src="/images/instruments/cymbals.svg" width="44" height="44" />
+				<img src="/images/instruments/electric-guitar.svg" width="44" height="44" />
+				<img src="/images/instruments/flute.svg" width="44" height="44" />
+				<img src="/images/instruments/goblet-drum.svg" width="44" height="44" />
+				<img src="/images/instruments/guitar-pick.svg" width="44" height="44" />
+				<img src="/images/instruments/harp.svg" width="44" height="44" />
+				<img src="/images/instruments/loudspeaker.svg" width="44" height="44" />
+				<img src="/images/instruments/lyre.svg" width="44" height="44" />
+				<img src="/images/instruments/mandolin.svg" width="44" height="44" />
+				<img src="/images/instruments/maraca.svg" width="44" height="44" />
+				<img src="/images/instruments/metronome.svg" width="44" height="44" />
+				<img src="/images/instruments/microphone_01.svg" width="44" height="44" />
+				<img src="/images/instruments/microphone.svg" width="44" height="44" />
+				<img src="/images/instruments/note_01.svg" width="44" height="44" />
+				<img src="/images/instruments/note.svg" width="44" height="44" />
+				<img src="/images/instruments/pan-flute.svg" width="44" height="44" />
+				<img src="/images/instruments/piano.svg" width="44" height="44" />
+				<img src="/images/instruments/reel-to-reel-tape-recorder.svg" width="44" height="44" />
+				<img src="/images/instruments/saxophone.svg" width="44" height="44" />
+				<img src="/images/instruments/snare-drum.svg" width="44" height="44" />
+				<img src="/images/instruments/synthesizer.svg" width="44" height="44" />
+				<img src="/images/instruments/tambourine_01.svg" width="44" height="44" />
+				<img src="/images/instruments/tambourine.svg" width="44" height="44" />
+				<img src="/images/instruments/treble-clef.svg" width="44" height="44" />
+				<img src="/images/instruments/triangle.svg" width="44" height="44" />
+				<img src="/images/instruments/trombone.svg" width="44" height="44" />
+				<img src="/images/instruments/trumpet.svg" width="44" height="44" />
+				<img src="/images/instruments/tuba.svg" width="44" height="44" />
+				<img src="/images/instruments/vibraphone.svg" width="44" height="44" />
+				<img src="/images/instruments/vinyl-record.svg" width="44" height="44" />
+				<img src="/images/instruments/violin.svg" width="44" height="44" />
+				<img src="/images/instruments/xylophone.svg" width="44" height="44" />
+			</div>
+		</dialog>
+		<script src="admin.js"></script>
+	</body>
+</html>
