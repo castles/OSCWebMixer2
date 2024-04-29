@@ -8,6 +8,8 @@ A rewrite of [OSCWebMixer](https://github.com/castles/OSCWebMixer) - A server th
 * Channels can be sorted
 * Custom functionality can be added by writing some simple Plugins. There are a couple of examples of how this can be used in the plugins directory.
 * Webmixer can send and receive OSC messages to custom devices. This means it can communicate with TouchOSC, Reaper etc.
+* Startup is much quicker because webmixer requests only the information it requires.
+* You can group your channels to make them easier to find.
 
 ## Donate
 This project has taken considerable time to create. If you find it useful and would like further development please make a donation.
