@@ -15,8 +15,8 @@ This project has taken considerable time to create. If you find it useful and wo
 * Server, Desk and other devices must all be on the same network
 
 ## Basic Setup Instructions
-1. Create a folder to store files and open a terminal in the directory.
-2. Run "npm install https://github.com/castles/OSCWebMixer2.git" to download all the required node modules.
+1. Download repository and navigate to the directory in a shell.
+2. Run "npm install" to install all the required modules.
 3. Run "node ." to start the server.
 4. Visit the admin URL in your browser to configure the server.
 5. Open the server IP address on another device and start mixing.
