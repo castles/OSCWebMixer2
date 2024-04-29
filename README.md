@@ -16,7 +16,7 @@ This project has taken considerable time to create. If you find it useful and wo
 
 [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=VL5VBHN57FVS2&item_name=OSCWebMixer)
 
-### Requirements
+## Requirements
 * A SD Series DiGiCo Mixing desk.
 * A computer to run the server. Windows, macOS or Linux.
 * [Node](https://nodejs.org/en/download/) must be installed. On macOS you can install it with [Homebrew](https://brew.sh/) (brew install node)
