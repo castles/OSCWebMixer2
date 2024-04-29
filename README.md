@@ -1,7 +1,13 @@
 # OSCWebMixer2
 A rewrite of [OSCWebMixer](https://github.com/castles/OSCWebMixer) - A server that allows multiple web clients to control their own mix as well as external devices for a DiGiCo sound desk. It currently works with SD Series consoles.
 
-This new version uses the same iPad connection that is built into the SD consoles so it means you can use webmixer devices as well as the DiGiCo iPad apps at the same time. In-fact you can use multiple iPad apps simultaneously!
+# What makes v2 better?
+* This new version uses the same iPad connection that is built into the SD consoles so it means you can use webmixer devices as well as the DiGiCo iPad apps at the same time. In-fact you can use multiple iPad apps simultaneously!
+* All configuration is done in a browser instead of config files
+* Auxilaries and Channels can have icons assigned to them
+* Channels can be sorted
+* Custom functionality can be added by writing some simple Plugins. There are a couple of examples of how this can be used in the plugins directory.
+* Webmixer can send and receive OSC messages to custom devices. This means it can communicate with TouchOSC, Reaper etc.
 
 ## Donate
 This project has taken considerable time to create. If you find it useful and would like further development please make a donation.
@@ -37,4 +43,8 @@ This project has taken considerable time to create. If you find it useful and wo
 <details>
   <summary>Can I connect multiple iPads at once with the DiGiCo app?</summary>
   Yes, go for it.
+</details>
+<details>
+  <summary>How do I enable a plugin?</summary>
+  Add a script into the plugin directory and make sure the filename doesn't start with an underscore. Restart webmixer and your plugin will be loaded.
 </details>
