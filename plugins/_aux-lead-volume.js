@@ -5,7 +5,7 @@
 class leadvol
 {
 	//how much to increase or deacrease the volume
-	SHIFT = 3;
+	SHIFT = 6;
 
 	//store previous values here
 	savedValues = [];
@@ -67,17 +67,20 @@ class leadvol
 
 	changeLevel(webmixer, channel, aux, amount)
 	{
-		webmixer.broadcast({
-			address: "/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_level",
-			args: [
-				webmixer.cache["/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_level"].args[0] + amount
-			]
-		});
+		if(webmixer.cache["/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_level"] !== undefined)
+		{
+			webmixer.broadcast({
+				address: "/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_level",
+				args: [
+					webmixer.cache["/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_level"].args[0] + amount
+				]
+			});
+		}
 	}
 
 	resetPanning(webmixer, channel, aux)
 	{
-		if(this.savedValues["/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_pan"].args[0] !== null)
+		if(this.savedValues["/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_pan"] !== undefined)
 		{
 			webmixer.broadcast({
 				address: "/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_pan",
