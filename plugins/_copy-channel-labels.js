@@ -16,10 +16,12 @@ class copyChannelLabels
 		 * Mapping of Channel From => Channel To
 		 */
 		const FOH_CHANNELS = {
-			26: 1, //L1
-			//27: 1000, //L2
-			//28: 1000, //L3
-			//29: 1000, //L4
+			26: 41, //L1
+			27: 42, //L2
+			28: 43, //BV1
+			29: 44, //BV2
+			30: 45, //BV3
+			9: 6, //BV4
 		};
 
 		//create osc message to send to everything
