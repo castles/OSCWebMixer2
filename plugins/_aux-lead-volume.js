@@ -30,6 +30,12 @@ class leadvol
 			30: 45 //BV3
 		};
 
+		//update saved pan level even if channel is in lead group
+		if(/^\/Input_Channels\/([0-9]+)\/Aux_Send\/([0-9]+)\/send_pan$/.test(message.address) && this.savedValues[message.address] != undefined)
+		{
+			this.savedValues[message.address] = message;
+		}
+
 		//Loop over all vocal channels
 		for(const [fohChannel, iemChannel] of Object.entries(FOH_CHANNELS))
 		{

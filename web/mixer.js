@@ -12,6 +12,33 @@ let channelInputs = null;
 let panInputs = null;
 
 /**
+ * Calculate the db value from the provided slider value.
+ * @param {float} value - the value to calculate from.
+ * - Should be between 0 and 1.
+ * - Will return a value between -150 and 10
+ */
+function sliderToDb(value)
+{
+	const val = ((Math.log(value * 100) / Math.log(100)) * 100) - 90;
+	if(val === -Infinity)
+	{
+		return -150;
+	}
+	return val;
+}
+
+/**
+ * Calculate the value a slider should be from the provided db value.
+ * This is the reverse of the formula in sliderToDb
+ * @param {float} value - The db to calculate from
+ * - between -90 and +10
+ */
+function dbToSlider(db)
+{
+	return Math.pow(100, (db + 90) / 100) / 100;
+}
+
+/**
  * callback for when a channel volume or pan changes
  * @param ChangeEvent e - the channel volume/pan change event
  */
@@ -30,7 +57,7 @@ function sliderChange(e)
 
 	if(this.classList.contains("volumeInput"))
 	{
-		sliderValue = (sliderValue * 100) - 90;
+		sliderValue = sliderToDb(sliderValue);
 	}
 
 	if(this.classList.contains("panInput"))
@@ -90,7 +117,7 @@ function onMessage(e)
 		{
 			//-90 to +10
 			let slider = channelInputs[sendLevel[1] - 1];
-			slider.value = (parseFloat(json.args[0]) + 90) / 100;
+			slider.value = dbToSlider(parseFloat(json.args[0]));
 			slider.parentNode.style.setProperty('--value', (slider.value * 100) + "%");
 		}
 	}
@@ -256,13 +283,21 @@ function tapSlider(e)
 
 /**
  * Reset a channel to its default value.
- - Pan sliders will be set to 0
+ - Pan sliders will be set to 0.5
  - Volume sliders will be set to 0
  * @param Event e - The Tap or Click Event
  */
 function resetSlider(e)
 {
-	e.target.value = 0;
+	if(this.classList.contains("volumeInput"))
+	{
+		e.target.value = 0;
+	}
+	if(this.classList.contains("panInput"))
+	{
+		e.target.value = 0.5;
+	}
+
 	e.target.dispatchEvent(new Event("input"));
 }
 
@@ -285,13 +320,13 @@ function buildChannels(channels)
 		{
 			html += '<img src="' + channel.icon + '" width="22" height="22" class="icon" />';
 		}
-		html += '<span>' + channel.label + '</span><input type="range" data-channel="' + channel.channel + '" class="volumeInput" step="0.01" min="0" max="1" value="0" /></label>';
+		html += '<span>' + channel.label + '</span><input type="range" data-channel="' + channel.channel + '" class="volumeInput" step="0.001" min="0" max="1" value="0" /></label>';
 		html += '<label class="pan">';
 		if(channel.icon != "")
 		{
 			html += '<img src="' + channel.icon + '" width="22" height="22" class="icon" />';
 		}
-		html += '<span>' + channel.label + '</span><input type="range" data-channel="' + channel.channel + '" class="panInput" step="0.01" min="0" max="1" value="0.5" /></label>';
+		html += '<span>' + channel.label + '</span><input type="range" data-channel="' + channel.channel + '" class="panInput" step="0.001" min="0" max="1" value="0.5" /></label>';
 		html += '</div>';
 	}
 
