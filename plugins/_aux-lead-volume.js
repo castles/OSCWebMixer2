@@ -1,3 +1,5 @@
+const ADDED_TO_GROUP = 1;
+
 /**
  * This is a plugin that boosts the volume and centres the panning of a vocal in specified auxillary packs when the vocal is added to a lead group.
  * It also reverts the changes when the vocal is removed from the lead group.
@@ -10,75 +12,82 @@ class leadvol
 	//store previous values here
 	savedValues = [];
 
+	AUXS_TO_ADJUST = [
+		1, //DRUMS
+		2, //BASS
+		4, //GTR
+		5 //KEYS
+	];
+
+	/**
+	 * Mapping of FOH Channels => IEM Channels
+	 */
+	CHANNEL_MAPPING = {
+		26: 41, //L1
+		27: 42, //L2
+		28: 43, //BV1
+		29: 44, //BV2
+		30: 45 //BV3
+	};
+
 	handleOSC(message, webmixer)
 	{
-		const AUXS_TO_ADJUST = [
-			1, //DRUMS
-			2, //BASS
-			4, //GTR
-			5 //KEYS
-		];
-
-		/**
-		 * Mapping of FOH Channels => IEM Channels
-		 */
-		const FOH_CHANNELS = {
-			26: 41, //L1
-			27: 42, //L2
-			28: 43, //BV1
-			29: 44, //BV2
-			30: 45 //BV3
-		};
-
-		//update saved pan level even if channel is in lead group
-		if(/^\/Input_Channels\/([0-9]+)\/Aux_Send\/([0-9]+)\/send_pan$/.test(message.address) && this.savedValues[message.address] != undefined)
+		const matches = /\/Input_Channels\/(\d+)\/Group_Send\/4\/group/.exec(message.address);
+		if(matches == null)
 		{
-			this.savedValues[message.address] = message;
+			return;
 		}
 
-		//Loop over all vocal channels
-		for(const [fohChannel, iemChannel] of Object.entries(FOH_CHANNELS))
+		const fohChannel = matches[1],
+		iemChannel = this.CHANNEL_MAPPING[fohChannel];
+		if(undefined == iemChannel)
 		{
-			//When added to Lead Group
-			if(message.address == "/Input_Channels/" + fohChannel + "/Group_Send/4/group" && message.args[0] == 1)
-			{
-				AUXS_TO_ADJUST.forEach(aux => {
+			return;
+		}
 
-					//save the current pan. We use this to restore the panning value when the vocal is removed from the lead group.
-					this.savedValues["/Input_Channels/" + iemChannel + "/Aux_Send/" + aux + "/send_pan"] = webmixer.cache["/Input_Channels/" + iemChannel + "/Aux_Send/" + aux + "/send_pan"];
+		//When added to Lead Group
+		if(message.args[0] == ADDED_TO_GROUP)
+		{
+			this.AUXS_TO_ADJUST.forEach(aux => {
 
-					//Turn Up
-					this.changeLevel(webmixer, iemChannel, aux, this.SHIFT);
+				//save the current pan. We use this to restore the panning value when the vocal is removed from the lead group.
+				const panKey = this.panAddress(iemChannel, aux);
+				this.savedValues[panKey] = webmixer.cache[panKey];
 
-					//Pan to center
-					this.changePanning(webmixer, iemChannel, aux, 0.5);
-				})
-			}
+				//Turn Up
+				this.changeLevel(webmixer, iemChannel, aux, this.SHIFT);
 
-			//When removed from Lead Group
-			if(message.address == "/Input_Channels/" + fohChannel + "/Group_Send/4/group" && message.args[0] == 0)
-			{
-				AUXS_TO_ADJUST.forEach(aux => {
+				//Pan to center
+				this.changePanning(webmixer, iemChannel, aux, 0.5);
+			});
+			return;
+		}
 
-					//Turn Down
-					this.changeLevel(webmixer, iemChannel, aux, -this.SHIFT);
+		//When removed from Lead Group
+		this.AUXS_TO_ADJUST.forEach(aux => {
 
-					//reset Panning
-					this.resetPanning(webmixer, iemChannel, aux);
-				});
-			}
-		};
+			//Turn Down
+			this.changeLevel(webmixer, iemChannel, aux, -this.SHIFT);
 
+			//reset Panning
+			this.resetPanning(webmixer, iemChannel, aux);
+		});
+	}
+
+	isLeadGroupAddress(address, fohChannel)
+	{
+		return address == "/Input_Channels/" + fohChannel + "/Group_Send/4/group"
 	}
 
 	changeLevel(webmixer, channel, aux, amount)
 	{
-		if(webmixer.cache["/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_level"] !== undefined)
+		const key = "/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_level";
+		if(webmixer.cache[key] !== undefined)
 		{
 			webmixer.broadcast({
-				address: "/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_level",
+				address: key,
 				args: [
-					webmixer.cache["/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_level"].args[0] + amount
+					webmixer.cache[key].args[0] + amount
 				]
 			});
 		}
@@ -86,12 +95,19 @@ class leadvol
 
 	resetPanning(webmixer, channel, aux)
 	{
-		if(this.savedValues["/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_pan"] !== undefined)
+		const key = this.panAddress(channel, aux),
+		savedValue = this.savedValues[key];
+		if(savedValue !== undefined)
 		{
+			//don't reset if the cache is different to the saved value
+			if(webmixer.cache[key] != savedValue)
+			{
+				return;
+			}
 			webmixer.broadcast({
-				address: "/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_pan",
+				address: key,
 				args: [
-					this.savedValues["/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_pan"].args[0]
+					savedValue.args[0]
 				]
 			});
 		}
@@ -100,11 +116,16 @@ class leadvol
 	changePanning(webmixer, channel, aux, pan)
 	{
 		webmixer.broadcast({
-			address: "/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_pan",
+			address: this.panAddress(channel, aux),
 			args: [
 				pan
 			]
 		});
+	}
+
+	panAddress(channel, aux)
+	{
+		return "/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_pan";
 	}
 }
 

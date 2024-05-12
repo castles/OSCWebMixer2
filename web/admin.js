@@ -268,14 +268,20 @@ function addIconPicker(element, name, icon)
 
 /**
  * Create an Auxilary
+ * @param {int} number - the aux number
  * @param {boolean} enabled - wether or not the auxilary is enabled
  * @param {string} name - the name of the auxilary
  * @param {string} colour - the colour of the auxilary
  * @param {string} icon - the icon for the auxilary
  */
-function createAux(enabled, name, colour, icon)
+function createAux(number, enabled, name, colour, icon)
 {
 	let auxWrap = document.createElement("div");
+
+	let channelNumberLabel = document.createElement("label");
+	channelNumberLabel.className = "listNumber";
+	channelNumberLabel.innerHTML = String(number).padStart(2, "0");
+	auxWrap.appendChild(channelNumberLabel);
 
 	auxWrap.appendChild(createCheckboxField("auxEnabled[]", enabled, ""));
 
@@ -356,16 +362,22 @@ function movedown(e)
 
 /**
  * Create a Channel
- * @param {boolean} enabled - wether or not the channel is enabled
+ * @param {int} number - the channel number
+ * @param {boolean} enabled - whether or not the channel is enabled
  * @param {string} name - the name of the channel
  * @param {integer} order - the position of the channel
  * @param {string} icon - the icon for the channel
  * @param {string} title - the section title
  */
-function createChannel(enabled, name, order, icon="", title="")
+function createChannel(number, enabled, name, order, icon="", title="")
 {
 	let channelWrap = document.createElement("div");
 	channelWrap.style.order = order;
+
+	let channelNumberLabel = document.createElement("label");
+	channelNumberLabel.className = "listNumber";
+	channelNumberLabel.innerHTML = String(number).padStart(2, "0");
+	channelWrap.appendChild(channelNumberLabel);
 
 	let sectionTitleLabel = document.createElement("label");
 
@@ -486,9 +498,9 @@ function fetchAux()
 
 			auxiliaries.innerHTML = "";
 
-			for(let aux of json)
+			for(let [index, aux] of json.entries())
 			{
-				createAux(aux.enabled, aux.name, aux.colour, aux.icon);
+				createAux(index + 1, aux.enabled, aux.name, aux.colour, aux.icon);
 			}
 		});
 }
@@ -509,9 +521,9 @@ function fetchChannels()
 
 			channels.innerHTML = "";
 
-			for(let channel of json)
+			for(let [index, channel] of json.entries())
 			{
-				createChannel(channel.enabled, channel.name, channel.order, channel.icon, channel.title);
+				createChannel(index + 1, channel.enabled, channel.name, channel.order, channel.icon, channel.title);
 			}
 
 			ensureValidOrder(channels.childNodes, "channelOrder[]");
