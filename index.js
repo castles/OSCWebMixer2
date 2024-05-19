@@ -130,7 +130,7 @@ function buildConfig()
 					enabled: config.channels[i] ? config.channels[i].enabled : true,
 					label: cache["/Input_Channels/" + (i + 1) + "/Channel_Input/name"].args[0],
 					channel: i + 1,
-					order: config.channels[i].order,
+					order: config.channels[i].order ?? i,
 					title: config.channels[i] ? config.channels[i].title : "",
 					icon: config.channels[i] ? config.channels[i].icon : ""
 				});
@@ -198,21 +198,26 @@ function startServer()
 
 			if(config.debug)
 			{
-				console.debug("Message from client: ", oscMsg);
+				console.debug("Message recieved from socket client: " + JSON.stringify(oscMsg));
+			}
+
+			oscMsg = processPlugins(oscMsg);
+			if(oscMsg === false)
+			{
+				return;
 			}
 
 			//respond from cache if a value exists
-			if(oscMsg.address.substr(-2) == "/?" && cache[oscMsg.address.slice(0,-2)] != undefined)
+			const key = oscMsg.address.slice(0,-2);
+			if(oscMsg.address.substr(-2) == "/?" && cache[key] != undefined)
 			{
-				this.send(JSON.stringify(cache[oscMsg.address.slice(0,-2)]));
+				this.send(JSON.stringify(cache[key]));
 				return;
 			}
 
 			maybeCacheResponse(oscMsg);
 
-			broadcast(oscMsg, {source: this});
-
-			processPlugins(oscMsg);
+			broadcast(oscMsg, this);
 		});
 	});
 
@@ -253,7 +258,7 @@ function startServer()
 			for(let x = 0; x<req.body.externalName.length; x++)
 			{
 				config.external.push({
-					enabled: req.body.externalEnabled[x] == "true",
+					broadcast: req.body.externalBroadcast[x] == "true",
 					name: req.body.externalName[x],
 					ip: req.body.externalIP[x],
 					port: req.body.externalReceive[x],
@@ -599,7 +604,7 @@ function fetchValues()
 
 	if(config.debug)
 	{
-		console.log("Loading ", osc);
+		console.log("Requesting channels from Mixing Desk");
 	}
 
 	setTimeout(fetchValues, 3000);
@@ -627,7 +632,24 @@ function startOSC()
 
 	udpPort.on("message", function(oscMsg, timeTag, info)
 	{
+		if(config.debug)
+		{
+			console.log("Message received over UDP: " + JSON.stringify(oscMsg));
+		}
+
+		oscMsg = processPlugins(oscMsg);
+		if(oscMsg === false)
+		{
+			return;
+		}
+
 		maybeCacheResponse(oscMsg);
+
+		if(!loaded)
+		{
+			loadNextRequiredParameter();
+			return;
+		}
 
 		//respond from cache if a value exists
 		const key = oscMsg.address.slice(0,-2);
@@ -637,14 +659,7 @@ function startOSC()
 			return;
 		}
 
-		if(!loaded)
-		{
-			loadNextParameter();
-		}
-
-		broadcast(oscMsg, {source: info.address}); //send to everyone except the IP that it came from
-
-		processPlugins(oscMsg);
+		broadcast(oscMsg, info.address); //send to everyone except the IP that it came from
 	});
 
 	udpPort.on("ready", fetchValues);
@@ -667,41 +682,35 @@ function closeAllConnections()
 /**
  * Broadcast an OSC message to all connections
  * @param {Object} oscMsg - the OSC message to send
- * @param {Object} - optional parameters that change this functions behaviour
- * 		- target - only send to this connection
- * 		- source - don't send to this connection
+ * @param {string|WebSocketConnection} source - don't broadcast to this connection
+ * @returns {void}
  */
-function broadcast(oscMsg, {target = undefined, source = undefined} = {})
+function broadcast(oscMsg, source)
 {
-	if(config.debug)
-	{
-		console.log(oscMsg);
-	}
-
 	//notify desk
-	if(config.desk.ip != source || target && config.desk.ip == target)
+	if(config.desk.ip != source)
 	{
 		udpPort.send(oscMsg, config.desk.ip, config.desk.port);
 		if(config.debug)
 		{
-			console.log("sent to mixing desk " + config.desk.ip + ":" + config.desk.port);
+			console.log("Sent " + JSON.stringify(oscMsg) + " to " + config.desk.ip + ":" + config.desk.port + " (Mixing Desk)");
 		}
 	}
 
 	//notify all external devices
 	if(config.external)
 	{
-	for(let external of config.external)
-	{
-		if(external.enabled && (external.loopback || external.ip != source || target && external.ip == target))
+		for(let external of config.external)
 		{
-			udpPort.send(oscMsg, external.ip, external.port);
-			if(config.debug)
+			if(external.broadcast && (external.loopback || external.ip != source))
 			{
-				console.log("sent to " + external.ip + ":" + external.port + " (" + external.name + ")");
+				udpPort.send(oscMsg, external.ip, external.port);
+				if(config.debug)
+				{
+					console.log("Sent " + JSON.stringify(oscMsg) + " to " + external.ip + ":" + external.port + " (" + external.name + ")");
+				}
 			}
 		}
-	}
 	}
 
 	//notify all webmixer connections
@@ -715,12 +724,12 @@ function broadcast(oscMsg, {target = undefined, source = undefined} = {})
 		if(connection.readyState <= 1)
 		{
 			validConnections.push(connection);
-			if(connection != source || target && connection == target)
+			if(connection != source)
 			{
 				connection.send(JSON.stringify(oscMsg));
 				if(config.debug)
 				{
-					console.log("sent to socket " + validConnections.length);
+					console.log("Sent " + JSON.stringify(oscMsg) + " to socket " + validConnections.length);
 				}
 			}
 		}
@@ -758,7 +767,7 @@ function maybeCacheResponse(msg)
 			cache[msg.address] = msg;
 			if(config.debug)
 			{
-				console.log("Cached", msg);
+				console.log("Cached " + JSON.stringify(msg));
 			}
 			return;
 		}
@@ -788,7 +797,7 @@ function addToObject(objectArray, position, key, value)
  * Request the required parameters from the desk in order.
  * This gets called every time a mesage arrives until all the required parameters have loaded.
  */
-function loadNextParameter()
+function loadNextRequiredParameter()
 {
 	if(cache["/Console/Input_Channels"] == undefined)
 	{
@@ -826,17 +835,49 @@ function loadNextParameter()
 }
 
 /**
+ * Send a OSC message to a device via UDP
+ * @param {string} name - the name of the device to send to
+ * @param {object} msg - the OSC message to send
+ */
+function sendUDP(name, msg)
+{
+	if(config.external)
+	{
+		for(let external of config.external)
+		{
+			if(external.name == name)
+			{
+				udpPort.send(msg, external.ip, external.port);
+				if(config.debug)
+				{
+					console.log("Sent " + JSON.stringify(msg) + " to " + external.ip + ":" + external.port + " (" + external.name + ")");
+				}
+			}
+		}
+	}
+}
+
+/**
  * Processes all loaded plugins.
  * @param {Object} oscMsg
+ * @return {bool|object} - false when nothing should happen after the plugins have executed or the OSC message which may have been modified.
  */
 function processPlugins(oscMsg)
 {
-	plugins.forEach((plugin) =>
+	for(const plugin of plugins)
 	{
-		plugin.handleOSC(oscMsg, {broadcast: broadcast, cache:cache});
-	});
+		let response = plugin.handleOSC(oscMsg, {broadcast:broadcast, cache:cache, send: sendUDP});
+		if(response === false)
+		{
+			return false;
+		}
+		if(response !== undefined)
+		{
+			oscMsg = response;
+		}
+	};
+	return oscMsg;
 }
-
 
 startServer();
 startOSC();

@@ -5,7 +5,6 @@ class streamdecklabels
 {
 	handleOSC(message, webmixer)
 	{
-		const STREAMDECK_IP = "192.168.1.131";
 		const nameChangeMatch = message.address.match(/^\/Input_Channels\/([0-9]+)\/Channel_Input\/name$/);
 
 		if(nameChangeMatch == undefined)
@@ -23,19 +22,15 @@ class streamdecklabels
 			29: "1/1/0", //L4
 		};
 
-		webmixer.broadcast(
+		webmixer.send(
+			"StreamDeck",
 			{
 				address: "/location/" + FOH_CHANNELS[nameChangeMatch[1]] + "/style/text",
 				args: [
 					message.args[0] + " Autotune"
 				]
-			},
-			{
-				target: STREAMDECK_IP
 			}
 		);
-
-		webmixer.send
 	}
 }
 

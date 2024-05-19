@@ -24,6 +24,12 @@ class copyChannelLabels
 			9: 6, //BV4
 		};
 
+		//if the channel isn't one that we care about
+		if(FOH_CHANNELS[nameChangeMatch[1]] == undefined)
+		{
+			return;
+		}
+
 		//create osc message to send to everything
 		const osc = {
 			address: "/Input_Channels/" + FOH_CHANNELS[nameChangeMatch[1]] + "/Channel_Input/name",

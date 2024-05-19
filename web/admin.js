@@ -13,6 +13,9 @@ auxiliaries = document.getElementById("auxiliaries"),
 channels = document.getElementById("channels"),
 iconDialog = document.getElementById("iconDialog");
 
+let ws = null,
+timeout = null;
+
 /**
  * Callback for delete button for external devices
  * @param {MouseEvent} e
@@ -37,7 +40,7 @@ function updateCheckboxHiddenField(e)
  * @param {int} externalIP
  * @param {int} externalReceivePort
  */
-function createExternal(externalEnabled = true, externalName = "", externalIP = "", externalLoopback = false, externalReceivePort = "")
+function createExternal(externalBroadcast = true, externalName = "", externalIP = "", externalLoopback = false, externalReceivePort = "")
 {
 	if(externalReceivePort == "")
 	{
@@ -49,8 +52,6 @@ function createExternal(externalEnabled = true, externalName = "", externalIP = 
 
 	let details = document.createElement("div");
 	details.className = "details";
-
-	details.appendChild(createCheckboxField("externalEnabled[]", externalEnabled, "Enabled"));
 
 	let nameLabel = document.createElement("label");
 	nameLabel.textContent = "Name";
@@ -71,13 +72,19 @@ function createExternal(externalEnabled = true, externalName = "", externalIP = 
 	ipLabel.appendChild(ipField);
 	details.appendChild(ipLabel);
 
+	details.appendChild(createCheckboxField("externalBroadcast[]", externalBroadcast, "Receive Broadcast Messages"));
+
 	details.appendChild(createCheckboxField("externalLoopback[]", externalLoopback, "Receive Own Messages", "By default Webmixer doesn't broadcast messages back to the source IP to prevent message loops. This disables the IP check. Be careful when turning this on."));
 
 	let deviceSettingsWrap = document.createElement("div");
 	deviceSettingsWrap.className = "settings";
 
+	let deskTitle = document.createElement("h2");
+	deskTitle.textContent = "Device Connection Settings";
+	deviceSettingsWrap.appendChild(deskTitle);
+
 	let deskLabel = document.createElement("label");
-	deskLabel.textContent = "Desk IP";
+	deskLabel.textContent = "IP Address";
 	let deskField = document.createElement("input");
 	deskField.disabled = true;
 	deskField.value = ipAddress.value;
@@ -176,12 +183,12 @@ configForm.addEventListener("submit", (e) => {
  * Create a checkbox field that sends a value if it is checked or not checked.
  * By default checkbox fields don't send a value when unchecked.
  * @param {string} name - the field name
- * @param {boolean} enabled - wether or not the field should be enabled
+ * @param {boolean} checked - wether or not the field should be checked
  * @param {string} label - the label for the field
  * @param {string} tooltip - optional tooltip for the field
  * @returns
  */
-function createCheckboxField(name, enabled, label, tooltip = "")
+function createCheckboxField(name, checked, label, tooltip = "")
 {
 	const checkboxField = document.createElement("input");
 	const checkboxLabel = document.createElement("label");
@@ -190,10 +197,10 @@ function createCheckboxField(name, enabled, label, tooltip = "")
 
 	checkboxHiddenField.type = "hidden";
 	checkboxHiddenField.name = name;
-	checkboxHiddenField.value = enabled;
+	checkboxHiddenField.value = checked;
 
 	checkboxField.type = "checkbox";
-	checkboxField.checked = enabled;
+	checkboxField.checked = checked;
 	checkboxField.addEventListener("change", updateCheckboxHiddenField);
 
 	checkboxLabel.appendChild(checkboxField);
@@ -478,7 +485,7 @@ fetch("/config")
 
 		for(let external of json.external)
 		{
-			createExternal(external.enabled, external.name, external.ip, external.loopback, external.port);
+			createExternal(external.broadcast, external.name, external.ip, external.loopback, external.port);
 		}
 	});
 
@@ -590,3 +597,101 @@ if(document.location.hash != "")
 {
 	document.querySelector('nav a[href="' + document.location.hash + '"]').dispatchEvent(new Event("click"));
 }
+
+
+
+/**
+ * Callback for when socket receives a message
+ * @param SocketEvent e - the message socket event
+ */
+function onMessage(e)
+{
+	let json = JSON.parse(e.data);
+
+	//console.log(json);
+
+	if(!json.address)
+	{
+		return;
+	}
+
+	//update channel names
+	let channelNameMatch = json.address.match(/^\/Input_Channels\/([0-9]+)\/Channel_Input\/name$/);
+	if(channelNameMatch !== null)
+	{
+		const row = channels.childNodes[channelNameMatch[1]-1];
+		if(!row)
+		{
+			return;
+		}
+		const input = row.querySelector('input[name="channelName[]"]')
+		if(!input)
+		{
+			return;
+		}
+		input.value = json.args[0];
+	}
+
+	//update Aux names
+	let auxNameMatch = json.address.match(/^\/Aux_Outputs\/([0-9]+)\/Buss_Trim\/name$/);
+	if(auxNameMatch !== null)
+	{
+		const row = auxiliaries.childNodes[auxNameMatch[1]-1];
+		if(!row)
+		{
+			return;
+		}
+		const input = row.querySelector('input[name="auxName[]"]')
+		if(!input)
+		{
+			return;
+		}
+		input.value = json.args[0];
+	}
+}
+
+/**
+ * When socket is connected
+ */
+function onOpen()
+{
+	document.body.classList.remove("disconnected");
+}
+
+/**
+ * When a socket connection fails
+ */
+function noConnection()
+{
+	// connection closed, discard old websocket and create a new one in 2s
+	if(ws)
+	{
+		ws.close();
+	}
+	clearTimeout(timeout);
+	timeout = setTimeout(startWebsocket, 2000);
+	document.body.classList.add("disconnected");
+}
+
+/**
+ * Start the connection to the server
+ */
+function startWebsocket()
+{
+	ws = new WebSocket("ws://" + document.location.host);
+	ws.onopen = onOpen;
+	ws.onmessage = onMessage;
+	ws.onclose = noConnection;
+	ws.onerror = noConnection;
+}
+
+/**
+ * When page has loaded
+ */
+document.addEventListener("DOMContentLoaded", function()
+{
+	setTimeout(function(){
+		startWebsocket();
+	}, 1000);
+
+});
