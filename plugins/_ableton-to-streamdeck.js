@@ -32,7 +32,7 @@ class AbletonStreamDeck
 		]
 
 		webmixer.send(
-			"StreamDeck at Home",
+			"StreamDeck",
 			{
 				"address": mapping[message.args[0]]
 			}
