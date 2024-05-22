@@ -834,7 +834,7 @@ function loadNextRequiredParameter()
 	}
 
 	//request all aux  level and pan values
-	for(let channel=1; channel<=cache["/Console/Input_Channels"].args[0]; channel++)
+	/*for(let channel=1; channel<=cache["/Console/Input_Channels"].args[0]; channel++)
 	{
 		for(let aux=1; aux<=cache["/Console/Aux_Outputs/modes"].args.length; aux++)
 		{
@@ -851,7 +851,7 @@ function loadNextRequiredParameter()
 				return;
 			}
 		}
-	}
+	}*/
 
 	loaded = true;
 }
