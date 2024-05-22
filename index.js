@@ -813,6 +813,7 @@ function loadNextRequiredParameter()
 		return;
 	}
 
+	//request aux names
 	for(let i=1; i<=cache["/Console/Aux_Outputs/modes"].args.length; i++)
 	{
 		if(cache["/Aux_Outputs/" + i + "/Buss_Trim/name"] == undefined)
@@ -822,12 +823,33 @@ function loadNextRequiredParameter()
 		}
 	}
 
+	//request channel names
 	for(let i=1; i<=cache["/Console/Input_Channels"].args[0]; i++)
 	{
 		if(cache["/Input_Channels/" + i + "/Channel_Input/name"] == undefined)
 		{
 			udpPort.send({address: "/Input_Channels/" + i + "/Channel_Input/name/?", args: []}, config.desk.ip, config.desk.port);
 			return;
+		}
+	}
+
+	//request all aux  level and pan values
+	for(let channel=1; channel<=cache["/Console/Input_Channels"].args[0]; channel++)
+	{
+		for(let aux=1; aux<=cache["/Console/Aux_Outputs/modes"].args.length; aux++)
+		{
+			//request level
+			if(cache["/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_level"] == undefined)
+			{
+				udpPort.send({address: "/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_level/?", args: []}, config.desk.ip, config.desk.port);
+				return;
+			}
+			//request pan
+			if(cache["/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_pan"] == undefined)
+			{
+				udpPort.send({address: "/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_level/?", args: []}, config.desk.ip, config.desk.port);
+				return;
+			}
 		}
 	}
 

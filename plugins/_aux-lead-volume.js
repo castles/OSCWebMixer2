@@ -7,7 +7,7 @@ const ADDED_TO_GROUP = 1;
 class leadvol
 {
 	//how much to increase or deacrease the volume
-	SHIFT = 6;
+	SHIFT = 5;
 
 	//store previous values here
 	savedValues = [];
@@ -29,6 +29,11 @@ class leadvol
 		29: 44, //BV2
 		30: 45 //BV3
 	};
+
+	/*CHANNEL_MAPPING = {
+		1: 1,
+		2: 2
+	};*/
 
 	handleOSC(message, webmixer)
 	{
@@ -100,7 +105,7 @@ class leadvol
 		if(savedValue !== undefined)
 		{
 			//don't reset if the cache is different to the saved value
-			if(webmixer.cache[key] != savedValue)
+			if(webmixer.cache[key].args[0] != savedValue.args[0])
 			{
 				return;
 			}
