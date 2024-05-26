@@ -13,8 +13,9 @@ class leadvol
 	savedValues = [];
 
 	AUXS_TO_ADJUST = [
-		1, //DRUMS
+		//1, //DRUMS
 		2, //BASS
+		3, //Stage Management
 		4, //GTR
 		5 //KEYS
 	];
@@ -30,13 +31,17 @@ class leadvol
 		30: 45 //BV3
 	};
 
-	/*CHANNEL_MAPPING = {
-		1: 1,
-		2: 2
-	};*/
 
 	handleOSC(message, webmixer)
 	{
+		//update the saved value whenever it changes
+		if(/^\/Input_Channels\/(\d+)\/Aux_Send\/(\d+)\/send_pan$/.test(message.address))
+		{
+			this.savedValues[message.address] = message;
+			return;
+		}
+
+		//look for lead group changes
 		const matches = /\/Input_Channels\/(\d+)\/Group_Send\/4\/group/.exec(message.address);
 		if(matches == null)
 		{
@@ -45,6 +50,8 @@ class leadvol
 
 		const fohChannel = matches[1],
 		iemChannel = this.CHANNEL_MAPPING[fohChannel];
+
+		//only process the channels we care about
 		if(undefined == iemChannel)
 		{
 			return;
@@ -104,28 +111,35 @@ class leadvol
 		savedValue = this.savedValues[key];
 		if(savedValue !== undefined)
 		{
-			//don't reset if the cache is different to the saved value
-			if(webmixer.cache[key].args[0] != savedValue.args[0])
-			{
-				return;
-			}
-			webmixer.broadcast({
+			const msg = {
 				address: key,
 				args: [
 					savedValue.args[0]
 				]
-			});
+			};
+
+			//reset the panning for all connections
+			webmixer.broadcast(msg);
+
+			//set the cache to the broadcasted value
+			webmixer.cache[key] = msg;
 		}
 	}
 
 	changePanning(webmixer, channel, aux, pan)
 	{
-		webmixer.broadcast({
+		const msg = {
 			address: this.panAddress(channel, aux),
 			args: [
 				pan
 			]
-		});
+		};
+
+		//notify all connections to update the panning
+		webmixer.broadcast(msg);
+
+		//set the cache to the new value
+		webmixer.cache[msg.address] = msg;
 	}
 
 	panAddress(channel, aux)

@@ -201,6 +201,16 @@ function startServer()
 				console.debug("Message recieved from socket client: " + JSON.stringify(oscMsg));
 			}
 
+			//ignore messages that are already cached
+			if(cache[oscMsg.address] != undefined && JSON.stringify(cache[oscMsg.address]) == JSON.stringify(oscMsg))
+			{
+				if(config.debug)
+				{
+					console.log("Message already in cache " + JSON.stringify(oscMsg));
+				}
+				return;
+			}
+
 			oscMsg = processPlugins(oscMsg);
 			if(oscMsg === false)
 			{
@@ -637,6 +647,16 @@ function startOSC()
 			console.log("Message received over UDP: " + JSON.stringify(oscMsg));
 		}
 
+		//ignore messages that are already cached
+		if(cache[oscMsg.address] != undefined && JSON.stringify(cache[oscMsg.address]) == JSON.stringify(oscMsg))
+		{
+			if(config.debug)
+			{
+				console.log("Message already in cache " + JSON.stringify(oscMsg));
+			}
+			return;
+		}
+
 		oscMsg = processPlugins(oscMsg);
 		if(oscMsg === false)
 		{
@@ -833,27 +853,65 @@ function loadNextRequiredParameter()
 		}
 	}
 
-	//request all aux  level and pan values
-	/*for(let channel=1; channel<=cache["/Console/Input_Channels"].args[0]; channel++)
-	{
-		for(let aux=1; aux<=cache["/Console/Aux_Outputs/modes"].args.length; aux++)
-		{
-			//request level
-			if(cache["/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_level"] == undefined)
-			{
-				udpPort.send({address: "/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_level/?", args: []}, config.desk.ip, config.desk.port);
-				return;
-			}
-			//request pan
-			if(cache["/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_pan"] == undefined)
-			{
-				udpPort.send({address: "/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_level/?", args: []}, config.desk.ip, config.desk.port);
-				return;
-			}
-		}
-	}*/
+	cachePrimeInterval = setInterval(primeCache, 100);
 
 	loaded = true;
+
+	console.log("Webmixer ready to use.");
+}
+
+let cachePrimeInterval = null;
+
+/**
+ * Load AUX levels and panning values into the cache.
+ * These aren't essential to using webmixer so they can load in the background.
+ * @returns
+ */
+function primeCache()
+{
+	if(config.debug)
+	{
+		console.log("Priming Cache");
+	}
+	//request all aux level and pan values if they have been saved in config
+	if(config.channels && config.auxilaries)
+	{
+		for(let aux=0; aux<config.auxilaries.length; aux++)
+		{
+			if(!config.auxilaries[aux].enabled)
+			{
+				continue;
+			}
+
+			for(let channel=0; channel<config.channels.length; channel++)
+			{
+				if(!config.channels[channel].enabled)
+				{
+					continue;
+				}
+
+				//request level
+				if(cache["/Input_Channels/" + (channel+1) + "/Aux_Send/" + (aux+1) + "/send_level"] == undefined)
+				{
+					udpPort.send({address: "/Input_Channels/" + (channel+1) + "/Aux_Send/" + (aux+1) + "/send_level/?", args: []}, config.desk.ip, config.desk.port);
+					return;
+				}
+				//request pan
+				if(cache["/Input_Channels/" + (channel+1) + "/Aux_Send/" + (aux+1) + "/send_pan"] == undefined)
+				{
+					udpPort.send({address: "/Input_Channels/" + (channel+1) + "/Aux_Send/" + (aux+1) + "/send_pan/?", args: []}, config.desk.ip, config.desk.port);
+					return;
+				}
+			}
+		}
+	}
+
+	clearInterval(cachePrimeInterval);
+
+	if(config.debug)
+	{
+		console.log("Cache Primed");
+	}
 }
 
 /**
