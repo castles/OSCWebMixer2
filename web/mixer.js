@@ -289,11 +289,12 @@ function tapSlider(e)
  */
 function resetSlider(e)
 {
-	if(this.classList.contains("volumeInput"))
+	if(e.target.classList.contains("volumeInput"))
 	{
 		e.target.value = 0;
 	}
-	if(this.classList.contains("panInput"))
+
+	if(e.target.classList.contains("panInput"))
 	{
 		e.target.value = 0.5;
 	}
