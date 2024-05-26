@@ -572,6 +572,7 @@ function navClick(e)
 	hideSections();
 	document.getElementById(e.target.hash.substr(1) + "-content").classList.add("show");
 	e.target.classList.add("selected");
+	e.preventDefault();
 }
 
 function hideSections()
