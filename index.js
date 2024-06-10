@@ -726,7 +726,7 @@ function processSnapshotMsg(oscMsg)
 		}
 
 		//request the name of the current snapshot. This will be captured below.
-		udpPort.send({address: "/Snapshots/name/?", args: [oscMsg.args[0]]}, config.desk.ip, config.desk.port);
+		udpPort.send({address: "/Snapshots/names/?", args: []}, config.desk.ip, config.desk.port);
 
 		return;
 	}
@@ -735,7 +735,7 @@ function processSnapshotMsg(oscMsg)
 	let renameSnapshot = oscMsg.address.match(/^\/Snapshots\/Rename_Snapshot\/([0-9]+)$/);
 	if(renameSnapshot !== null && renameSnapshot[1] == currentSnapshot)
 	{
-		currentSnapshotName = args[0];
+		currentSnapshotName = oscMsg.args[0];
 
 		broadcast({
 			"address": "/SnapshotName",
