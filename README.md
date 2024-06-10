@@ -16,6 +16,16 @@ This project has taken considerable time to create. If you find it useful and wo
 
 [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=VL5VBHN57FVS2&item_name=OSCWebMixer)
 
+## Screenshots
+<img src="https://github.com/castles/OSCWebMixer2/assets/323970/952cb304-b4f7-41b1-8308-2481bbbf6d78" width="400">
+<img src="https://github.com/castles/OSCWebMixer2/assets/323970/1e43dc8b-3995-4149-8771-3c512d14a378" width="400">
+<img src="https://github.com/castles/OSCWebMixer2/assets/323970/c60c263e-c848-4775-8e9a-59052eea2d01" width="400">
+<img src="https://github.com/castles/OSCWebMixer2/assets/323970/13b8e955-9633-490f-a321-5783e301758d" width="400">
+<img src="https://github.com/castles/OSCWebMixer2/assets/323970/06f017dd-d90e-4d81-83f3-1d85e836ecae" width="400">
+<img src="https://github.com/castles/OSCWebMixer2/assets/323970/06f017dd-d90e-4d81-83f3-1d85e836ecae" width="400">
+<img src="https://github.com/castles/OSCWebMixer2/assets/323970/51eebca5-4352-4d43-8834-e6ebd74d98e9" width="400">
+<img src="https://github.com/castles/OSCWebMixer2/assets/323970/b0deedf0-d0b1-4919-b960-50e2e6259b06" width="400">
+
 ## Requirements
 * A SD Series DiGiCo Mixing desk.
 * A computer to run the server. Windows, macOS or Linux.
