@@ -6,10 +6,11 @@ A rewrite of [OSCWebMixer](https://github.com/castles/OSCWebMixer) - A server th
 * All configuration is done in a browser instead of config files
 * Auxilaries and Channels can have icons assigned to them
 * Channels can be sorted
-* Custom functionality can be added by writing some simple Plugins. There are a couple of examples of how this can be used in the plugins directory.
+* Custom functionality can be added by writing some simple Plugins. There are a couple of examples of how this can be used in the plugins directory
 * Webmixer can send and receive OSC messages to custom devices. This means it can communicate with TouchOSC, Reaper etc.
-* Startup is much quicker because webmixer requests only the information it requires.
-* You can group your channels to make them easier to find.
+* Startup is much quicker because webmixer requests only the information it requires
+* You can group your channels to make them easier to find
+* The current snapshot name is displayed in webmixer
 
 ## Donate
 This project has taken considerable time to create. If you find it useful and would like further development please make a donation.
