@@ -725,7 +725,7 @@ function processSnapshotMsg(oscMsg)
 			return;
 		}
 
-		//request the name of the current snapshot. This will be captured below.
+		//request the names for the current snapshots. We will use the resonse to store the snapshot name below.
 		udpPort.send({address: "/Snapshots/names/?", args: []}, config.desk.ip, config.desk.port);
 
 		return;
