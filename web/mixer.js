@@ -3,7 +3,8 @@
 const channelsDiv = document.getElementById('channels'),
 auxSelect = document.getElementById('aux'),
 panCheckbox = document.getElementById("panning"),
-auxiliaries = document.getElementById("auxiliaries");
+auxiliaries = document.getElementById("auxiliaries"),
+snapshot = document.getElementById("snapshot");
 
 let ws = null,
 timeout = null;
@@ -101,11 +102,16 @@ function onMessage(e)
 	//Setup AUX and channels
 	if(json.config)
 	{
-
+		snapshot.innerText = json.config.snapshot;
 		buildAux(json.config.aux);
 		buildChannels(json.config.channels);
 		auxSelect.dispatchEvent(new Event("change"));
 		return;
+	}
+
+	if(json.address == "/SnapshotName")
+	{
+		snapshot.innerText = json.args[0];
 	}
 
 	//update level

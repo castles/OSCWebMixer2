@@ -37,6 +37,18 @@ let loaded = false;
 let cache = [];
 
 /**
+ * Stores the name of the current snapshot
+ * @type string
+ */
+let currentSnapshotName = "";
+
+/**
+ * Stores the number of the current snapshot
+ * @type int
+ */
+let currentSnapshot = -1;
+
+/**
 * Get the IP addresses for this device on the network.
 */
 const getIPAddresses = () =>
@@ -141,7 +153,8 @@ function buildConfig()
 	return JSON.stringify({
 		"config": {
 			channels: channels,
-			aux: auxilaries
+			aux: auxilaries,
+			snapshot: currentSnapshotName
 		}
 	});
 }
@@ -663,6 +676,8 @@ function startOSC()
 			return;
 		}
 
+		processSnapshotMsg(oscMsg);
+
 		maybeCacheResponse(oscMsg);
 
 		if(!loaded)
@@ -685,6 +700,65 @@ function startOSC()
 	udpPort.on("ready", fetchValues);
 
 	udpPort.open();
+}
+
+/**
+ * Ha
+ * @param {object} oscMsg
+ */
+function processSnapshotMsg(oscMsg)
+{
+	if(oscMsg.address == "/Snapshots/Current_Snapshot")
+	{
+		currentSnapshot = oscMsg.args[0];
+
+		//when the current snapshot has been deleted
+		if(currentSnapshot < 0)
+		{
+			currentSnapshotName = "";
+			broadcast({
+				"address": "/SnapshotName",
+				args: [
+					currentSnapshotName
+				]
+			}, config.desk.ip);
+			return;
+		}
+
+		//request the name of the current snapshot. This will be captured below.
+		udpPort.send({address: "/Snapshots/name/?", args: [oscMsg.args[0]]}, config.desk.ip, config.desk.port);
+
+		return;
+	}
+
+	//rename the current snapshot
+	let renameSnapshot = oscMsg.address.match(/^\/Snapshots\/Rename_Snapshot\/([0-9]+)$/);
+	if(renameSnapshot !== null && renameSnapshot[1] == currentSnapshot)
+	{
+		currentSnapshotName = args[0];
+
+		broadcast({
+			"address": "/SnapshotName",
+			args: [
+				currentSnapshotName
+			]
+		}, config.desk.ip);
+
+		return;
+	}
+
+	//if the message is the snapshot name we are waiting for
+	if(oscMsg.address == "/Snapshots/name" && oscMsg.args[0] == currentSnapshot)
+	{
+		currentSnapshotName = oscMsg.args[oscMsg.args.length - 1];
+
+		broadcast({
+			"address": "/SnapshotName",
+			args: [
+				currentSnapshotName
+			]
+		}, config.desk.ip);
+	}
 }
 
 /**
@@ -852,6 +926,10 @@ function loadNextRequiredParameter()
 			return;
 		}
 	}
+
+	//request current snapshot. If there is a snapshot then the index on the snapshot will be returned.
+	//We can then request the name of that snapshot
+	udpPort.send({address: "/Snapshots/Current_Snapshot/?", args: []}, config.desk.ip, config.desk.port);
 
 	cachePrimeInterval = setInterval(primeCache, 100);
 
