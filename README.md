@@ -30,7 +30,7 @@ This project has taken considerable time to create. If you find it useful and wo
 ## Requirements
 * A SD Series DiGiCo Mixing desk.
 * A computer to run the server. Windows, macOS or Linux.
-* [Node](https://nodejs.org/en/download/) must be installed. Windows might also require [GIT](https://git-scm.com/downloads/win) installed. On macOS you can install it with [Homebrew](https://brew.sh/) (brew install node)
+* [GIT](https://git-scm.com/downloads/win) will need to be installed for Windows. [Node](https://nodejs.org/en/download/) must be installed. On macOS you can install node with [Homebrew](https://brew.sh/) (brew install node)
 * Server, Desk and other devices must all be on the same network
 
 ## Basic Setup Instructions
