@@ -840,7 +840,7 @@ function stopOSC()
 }
 
 /**
- * Determine if we shoudl cache the message and store it in memory.
+ * Determine if we should cache the message and store it in memory.
  * @param {object} msg - the osc message to
  */
 function maybeCacheResponse(msg)
