@@ -1,0 +1,8 @@
+services:
+  webmixer:
+    image: oscwebmixer2:latest
+    container_name: webmixer
+    restart: unless-stopped
+    network_mode: host
+    # volumes:  # If initial config is empty, then program not starting correctly
+    #   - ./config.json:/webmixer/config.json
