@@ -40,6 +40,25 @@ This project has taken considerable time to create. If you find it useful and wo
 4. Visit the admin URL in your browser to configure the server.
 5. Open the server IP address on another device and start mixing.
 
+## Basic Setup Instructions For Docker
+1. Install Git and Docker 
+
+2. Then execute following commands:
+```
+git clone https://github.com/castles/OSCWebMixer2.git
+
+cd OSCWebMixer2 
+
+docker build -t oscwebmixer2:latest .
+
+docker compose up -d
+```
+
+3. To see logs and to see what address to connect run:
+```
+docker compose logs -f webmixer
+```
+
 ## FAQs
 <details>
   <summary>My External Devices won't connect</summary>
