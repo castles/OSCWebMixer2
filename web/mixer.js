@@ -403,17 +403,19 @@ document.addEventListener("DOMContentLoaded", function()
 		//save aux value so it can be restored
 		localStorage.setItem("aux", this.value);
 
+		let option = this.getElementsByTagName("option")[this.selectedIndex];
+
 		//set the current page tint
-		let colour = this.getElementsByTagName("option")[this.selectedIndex].dataset.colour;
+		let colour = option.dataset.colour;
 		document.body.style.setProperty('--tint', colour);
 
 		//set the current aux text
-		this.previousElementSibling.innerHTML = this.getElementsByTagName("option")[this.selectedIndex].text;
+		this.previousElementSibling.innerHTML = option.text;
 
-		this.previousElementSibling.previousElementSibling.src = this.getElementsByTagName("option")[this.selectedIndex].dataset.icon;
+		this.previousElementSibling.previousElementSibling.src = option.dataset.icon;
 
 		//toggle visibility of the pan checkbox
-		if(this.getElementsByTagName("option")[this.selectedIndex].dataset.stereo == "true")
+		if(option.dataset.stereo == "true")
 		{
 			panCheckbox.parentNode.style.display = "flex";
 		}
