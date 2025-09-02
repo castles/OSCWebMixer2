@@ -23,7 +23,7 @@ timeout = null;
 function deleteExternal(e)
 {
 	e.preventDefault();
-	e.target.closest(".external").remove();;
+	e.target.closest(".external").remove();
 }
 
 /**
@@ -183,7 +183,7 @@ configForm.addEventListener("submit", (e) => {
  * Create a checkbox field that sends a value if it is checked or not checked.
  * By default checkbox fields don't send a value when unchecked.
  * @param {string} name - the field name
- * @param {boolean} checked - wether or not the field should be checked
+ * @param {boolean} checked - whether or not the field should be checked
  * @param {string} label - the label for the field
  * @param {string} tooltip - optional tooltip for the field
  * @returns
@@ -465,30 +465,33 @@ function makeDraggable(target)
 }
 
 //load current config and populate fields
-fetch("/config")
-	.then((response) => response.json())
-	.then((json) => {
-
-		let deskPort = 9000;
-		if(json.desk.port != "")
-		{
-			deskPort = json.desk.port;
-		}
-
-		ipAddress.value = json.server.ip;
-		serverPort.value = json.server.port;
-		oscReceivePort.value = json.osc.port;
-		deskSendPort.value = json.osc.port;
-		deskIP.value = json.desk.ip;
-		deskReceivePort.value = deskPort;
-		debug.checked = json.debug == true;
-
-		for(let external of json.external)
-		{
-			createExternal(external.broadcast, external.name, external.ip, external.loopback, external.port);
-		}
-	});
-
+function loadConfig()
+{
+	fetch("/config")
+		.then((response) => response.json())
+		.then((json) => {
+	
+			let deskPort = 9000;
+			if(json.desk.port != "")
+			{
+				deskPort = json.desk.port;
+			}
+	
+			ipAddress.value = json.server.ip;
+			serverPort.value = json.server.port;
+			oscReceivePort.value = json.osc.port;
+			deskSendPort.value = json.osc.port;
+			deskIP.value = json.desk.ip;
+			deskReceivePort.value = deskPort;
+			debug.checked = json.debug == true;
+	
+			for(let external of json.external)
+			{
+				createExternal(external.broadcast, external.name, external.ip, external.loopback, external.port);
+			}
+		});
+}
+loadConfig();
 
 function fetchAux()
 {
@@ -657,6 +660,10 @@ function onMessage(e)
 function onOpen()
 {
 	document.body.classList.remove("disconnected");
+
+	loadConfig();
+	fetchAux();
+	fetchChannels();
 }
 
 /**
