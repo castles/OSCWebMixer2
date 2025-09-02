@@ -142,7 +142,7 @@ function buildConfig()
 					enabled: config.channels[i] ? config.channels[i].enabled : true,
 					label: cache["/Input_Channels/" + (i + 1) + "/Channel_Input/name"].args[0],
 					channel: i + 1,
-					order: config.channels[i].order ?? i,
+					order: config.channels[i]?.order ?? i,
 					title: config.channels[i] ? config.channels[i].title : "",
 					icon: config.channels[i] ? config.channels[i].icon : ""
 				});
