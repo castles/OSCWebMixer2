@@ -14,7 +14,7 @@ let panInputs = null;
 
 /**
  * Calculate the db value from the provided slider value.
- * @param {float} value - the value to calculate from.
+ * @param {number} value - the value to calculate from.
  * - Should be between 0 and 1.
  * - Will return a value between -150 and 10
  */
@@ -31,7 +31,7 @@ function sliderToDb(value)
 /**
  * Calculate the value a slider should be from the provided db value.
  * This is the reverse of the formula in sliderToDb
- * @param {float} value - The db to calculate from
+ * @param {number} db - The db to calculate from
  * - between -90 and +10
  */
 function dbToSlider(db)
@@ -41,7 +41,7 @@ function dbToSlider(db)
 
 /**
  * callback for when a channel volume or pan changes
- * @param ChangeEvent e - the channel volume/pan change event
+ * @param {!Event} e - the channel volume/pan change event
  */
 function sliderChange(e)
 {
@@ -91,7 +91,7 @@ function requestValues()
 
 /**
  * Callback for when socket receives a message
- * @param SocketEvent e - the message socket event
+ * @param {MessageEvent} e - the message socket event
  */
 function onMessage(e)
 {
@@ -193,10 +193,15 @@ function formatColour(hex)
 
 /**
  * Populate AUX Select Box
- * @param array options - An array of AUXs to add to the select box
+ * @param {Array<Object>} options - An array of AUXs to add to the select box
  */
 function buildAux(options)
 {
+	if(!options)
+	{
+    	return;
+	}
+
 	let selectHTML = "";
 
 	auxiliaries.innerHTML = "";
@@ -248,7 +253,7 @@ function buildAux(options)
 
 /**
  * open the auxiliaries picker when tapped
- * @param MouseEvent e - the mouse event
+ * @param {!Event} e - the mouse event
  */
 function auxMouseDown(e)
 {
@@ -260,7 +265,7 @@ auxSelect.addEventListener("mousedown", auxMouseDown);
 
 /**
  * Select the Aux when a button is tapped
- * @param MouseEvent e - the mouse event
+ * @param {!Event} e - the mouse event
  */
 function auxPickerClick(e)
 {
@@ -291,7 +296,7 @@ function tapSlider(e)
  * Reset a channel to its default value.
  - Pan sliders will be set to 0.5
  - Volume sliders will be set to 0
- * @param Event e - The Tap or Click Event
+ * @param {Event} e - The Tap or Click Event
  */
 function resetSlider(e)
 {
@@ -310,7 +315,7 @@ function resetSlider(e)
 
 /**
  * Build channels html and add to the page
- * @param array channels - the channels to build
+ * @param {!Array<Object>} channels - the channels to build
  */
 function buildChannels(channels)
 {
