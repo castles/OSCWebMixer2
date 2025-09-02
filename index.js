@@ -253,8 +253,6 @@ function startServer()
 	//when a post request occurs in the admin area
 	app.post('/admin', (req, res) => {
 
-		let reloadConnections = false;
-
 		//update config with new values
 		let portChanged = false;
 		if(config.server.port != req.body.server_port)
@@ -295,27 +293,14 @@ function startServer()
 			let auxConfig = [];
 			for(const [index, value] of req.body.auxEnabled.entries())
 			{
-				let enabledValue = value == "true";
-				if(!config.auxilaries || !config.auxilaries[index] || config.auxilaries[index].enabled != enabledValue)
-				{
-					reloadConnections = true;
-				}
-				addToObject(auxConfig, index, "enabled", enabledValue);
+				addToObject(auxConfig, index, "enabled", value == "true");
 			}
 			for(const [index, value] of req.body.auxColour.entries())
 			{
-				if(!config.auxilaries || config.auxilaries[index] != undefined && config.auxilaries[index].colour != value)
-				{
-					reloadConnections = true;
-				}
 				addToObject(auxConfig, index, "colour", value);
 			}
 			for(const [index, value] of req.body.auxIcon.entries())
 			{
-				if(!config.auxilaries || !config.auxilaries[index] || config.auxilaries[index].icon != value)
-				{
-					reloadConnections = true;
-				}
 				addToObject(auxConfig, index, "icon", value);
 			}
 			config.auxilaries = auxConfig;
@@ -326,35 +311,18 @@ function startServer()
 			let channelConfig = [];
 			for(const [index, value] of req.body.channelEnabled.entries())
 			{
-				let enabledValue = value == "true";
-				if(!config.channels || !config.channels[index] || config.channels[index].enabled != enabledValue)
-				{
-					reloadConnections = true;
-				}
-				addToObject(channelConfig, index, "enabled", enabledValue);
+				addToObject(channelConfig, index, "enabled", value == "true");
 			}
 			for(const [index, value] of req.body.channelOrder.entries())
 			{
-				if(!config.channels || !config.channels[index] || config.channels[index].order != value)
-				{
-					reloadConnections = true;
-				}
 				addToObject(channelConfig, index, "order", parseInt(value));
 			}
 			for(const [index, value] of req.body.sectionTitle.entries())
 			{
-				if(!config.channels || !config.channels[index] || config.channels[index].title != value)
-				{
-					reloadConnections = true;
-				}
 				addToObject(channelConfig, index, "title", value);
 			}
 			for(const [index, value] of req.body.channelIcon.entries())
 			{
-				if(!config.channels || !config.channels[index] || config.channels[index].icon != value)
-				{
-					reloadConnections = true;
-				}
 				addToObject(channelConfig, index, "icon", value);
 			}
 			config.channels = channelConfig;
@@ -413,11 +381,8 @@ function startServer()
 			}
 		}
 
-		//force webmixer connections to reload
-		if(reloadConnections)
-		{
-			closeAllConnections();
-		}
+		//force webmixer client and admin connections to reload
+		closeAllConnections();
 
 		if(oscPortChanged)
 		{
@@ -658,6 +623,16 @@ function startOSC()
 		if(config.debug)
 		{
 			console.log("Message received over UDP: " + JSON.stringify(oscMsg));
+		}
+
+		//session has changed. Reload
+		if(oscMsg.address == "/Console/Session/!")
+		{
+			cache = [];
+			loaded = false;
+			closeAllConnections();
+			fetchValues();
+			return;
 		}
 
 		//ignore messages that are already cached
