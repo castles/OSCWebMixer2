@@ -51,29 +51,28 @@ let currentSnapshot = -1;
 
 /**
 * Get the IP addresses for this device on the network.
+* @returns string[]
 */
-const getIPAddresses = () =>
-{
-	let os = require("os"),
-	interfaces = os.networkInterfaces(),
-	ipAddresses = [];
+function getIPAddresses() {
+	const interfaces = os.networkInterfaces();
 
-	for (let deviceName in interfaces)
-	{
-		let addresses = interfaces[deviceName];
-		for (let i = 0; i < addresses.length; i++)
-		{
-			let addressInfo = addresses[i];
-			if(addressInfo.family === "IPv4" && !addressInfo.internal)
-			{
-				ipAddresses.push(addressInfo.address);
-			}
-		}
-	}
+	const ipAddresses = Object.values(interfaces)
+	.flat()
+	.filter(addr => addr.family === "IPv4" && !addr.internal)
+	.map(addr => addr.address);
+
 	return ipAddresses;
-};
+}
 
-const mixServerIP = getIPAddresses()[0];
+/**
+ * Get the IP address of this device's main network interface.
+ * @returns string
+ */
+function getMainIPAddress() {
+	return getIPAddresses()[0];
+}
+
+const mixServerIP = getMainIPAddress();
 
 let plugins = [];
 const pluginFiles = fs.readdirSync('./plugins')
@@ -824,7 +823,7 @@ function stopOSC()
  */
 function maybeCacheResponse(msg)
 {
-	let addresses = [
+	let matchAddresses = [
 		/^\/Console\/Input_Channels$/, //cache total number of channels
 		/^\/Aux_Outputs\/([0-9]+)\/Buss_Trim\/name$/, //cache aux name
 		/^\/Console\/Aux_Outputs\/modes$/, //cache aux modes (stereo or mono)
@@ -833,7 +832,7 @@ function maybeCacheResponse(msg)
 		/^\/Input_Channels\/([0-9]+)\/Aux_Send\/([0-9]+)\/send_pan$/ //cache channel aux pan
 	];
 
-	for(let address of addresses)
+	for(let address of matchAddresses)
 	{
 		if(address.test(msg.address))
 		{
