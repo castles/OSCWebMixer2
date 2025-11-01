@@ -33,9 +33,9 @@ let loaded = false;
 
 /**
  * Stores OSC messages that have been cached
- * @type {Array}
+ * @type {Map}
  */
-let cache = [];
+let cache = new Map();
 
 /**
  * Stores the name of the current snapshot
@@ -101,9 +101,9 @@ for (const plugin of pluginFiles)
 function generateColour(number)
 {
 	let total = 16;
-	if(cache["/Console/Aux_Outputs/modes"] != undefined)
+	if(cache.has("/Console/Aux_Outputs/modes"))
 	{
-		total = cache["/Console/Aux_Outputs/modes"].args.length;
+		total = cache.get("/Console/Aux_Outputs/modes").args.length;
 	}
 
 	return new ColorTranslator('hsl(' + ((360 / total) * number) + ' 50% 40%)').HEX;
@@ -116,13 +116,13 @@ function generateColour(number)
 function buildConfig()
 {
 	let auxilaries = [];
-	if(cache["/Console/Aux_Outputs/modes"] != undefined && config.auxilaries != undefined)
+	if(cache.has("/Console/Aux_Outputs/modes") && config.auxilaries != undefined)
 	{
-		for(const [index, mode] of cache["/Console/Aux_Outputs/modes"].args.entries())
+		for(const [index, mode] of cache.get("/Console/Aux_Outputs/modes").args.entries())
 		{
 			auxilaries.push({
 				enabled: config.auxilaries[index] ? config.auxilaries[index].enabled : true,
-				label: cache["/Aux_Outputs/" + (index + 1) + "/Buss_Trim/name"].args[0],
+				label: cache.get(`/Aux_Outputs/${index+1}/Buss_Trim/name`).args[0],
 				channel: index + 1,
 				stereo: mode == 2,
 				colour: config.auxilaries[index] ? config.auxilaries[index].colour : generateColour(index),
@@ -132,15 +132,15 @@ function buildConfig()
 	}
 
 	let channels = [];
-	if(cache["/Console/Input_Channels"] != undefined && config.channels != undefined)
+	if(cache.has("/Console/Input_Channels") && config.channels != undefined)
 	{
-		for(let i=0; i<cache["/Console/Input_Channels"].args[0]; i++)
+		for(let i=0; i<cache.get("/Console/Input_Channels").args[0]; i++)
 		{
-			if(cache["/Input_Channels/" + (i + 1) + "/Channel_Input/name"] != undefined)
+			if(cache.has(`/Input_Channels/${i+1}/Channel_Input/name`))
 			{
 				channels.push({
 					enabled: config.channels[i] ? config.channels[i].enabled : true,
-					label: cache["/Input_Channels/" + (i + 1) + "/Channel_Input/name"].args[0],
+					label: cache.get(`/Input_Channels/${i+1}/Channel_Input/name`).args[0],
 					channel: i + 1,
 					order: config.channels[i]?.order ?? i,
 					title: config.channels[i] ? config.channels[i].title : "",
@@ -215,7 +215,7 @@ function startServer()
 			}
 
 			//ignore messages that are already cached
-			if(cache[oscMsg.address] != undefined && JSON.stringify(cache[oscMsg.address]) == JSON.stringify(oscMsg))
+			if(cache.has(oscMsg.address) && JSON.stringify(cache.get(oscMsg.address)) == JSON.stringify(oscMsg))
 			{
 				if(config.debug)
 				{
@@ -224,6 +224,7 @@ function startServer()
 				return;
 			}
 
+			
 			oscMsg = processPlugins(oscMsg);
 			if(oscMsg === false)
 			{
@@ -232,9 +233,9 @@ function startServer()
 
 			//respond from cache if a value exists
 			const key = oscMsg.address.slice(0,-2);
-			if(oscMsg.address.substr(-2) == "/?" && cache[key] != undefined)
+			if(oscMsg.address.substr(-2) == "/?" && cache.has(key))
 			{
-				this.send(JSON.stringify(cache[key]));
+				this.send(JSON.stringify(cache.get(key)));
 				return;
 			}
 
@@ -334,19 +335,17 @@ function startServer()
 		{
 			for(let i=0; i<req.body.auxName.length; i++)
 			{
-
 				if(
-					cache["/Aux_Outputs/" + (i + 1) + "/Buss_Trim/name"] != undefined &&
-					(cache["/Aux_Outputs/" + (i + 1) + "/Buss_Trim/name"] == undefined || //name isn't currently cached
-					cache["/Aux_Outputs/" + (i + 1) + "/Buss_Trim/name"].args[0] != req.body.auxName[i]) //new name is different
+					cache.has(`/Aux_Outputs/${i+1}/Buss_Trim/name`) &&
+					cache.get(`/Aux_Outputs/${i+1}/Buss_Trim/name`).args[0] != req.body.auxName[i]
 				)
 				{
 					//store new name
-					cache["/Aux_Outputs/" + (i + 1) + "/Buss_Trim/name"].args[0] = req.body.auxName[i];
+					cache.get(`/Aux_Outputs/${i+1}/Buss_Trim/name`).args[0] = req.body.auxName[i];
 
 					//let other connections know about new name
 					broadcast({
-							"address": "/Aux_Outputs/" + (i + 1) + "/Buss_Trim/name",
+							"address": `/Aux_Outputs/${i+1}/Buss_Trim/name`,
 							"args": [
 								req.body.auxName[i]
 							]
@@ -361,17 +360,16 @@ function startServer()
 			for(let i=0; i<req.body.channelName.length; i++)
 			{
 				if(
-					cache["/Input_Channels/" + (i + 1) + "/Channel_Input/name"] &&
-					(cache["/Input_Channels/" + (i + 1) + "/Channel_Input/name"] == undefined || //name isn't currently cached
-					cache["/Input_Channels/" + (i + 1) + "/Channel_Input/name"].args[0] != req.body.channelName[i]) //new name is different
+					cache.has(`/Input_Channels/${i+1}/Channel_Input/name`) &&
+					cache.get(`/Input_Channels/${i+1}/Channel_Input/name`).args[0] != req.body.channelName[i]
 				)
 				{
 					//store new name
-					cache["/Input_Channels/" + (i + 1) + "/Channel_Input/name"].args[0] = req.body.channelName[i];
+					cache.get(`/Input_Channels/${i+1}/Channel_Input/name`).args[0] = req.body.channelName[i];
 
 					//let other connections know about new name
 					broadcast({
-							"address": "/Input_Channels/" + (i + 1) + "/Channel_Input/name",
+							"address": `/Input_Channels/${i+1}/Channel_Input/name`,
 							"args": [
 								req.body.channelName[i]
 							]
@@ -431,11 +429,11 @@ function startServer()
 	app.get('/aux', (req, res) => {
 		let auxDetails = [];
 
-		if(cache["/Console/Aux_Outputs/modes"] != undefined)
+		if(cache.has("/Console/Aux_Outputs/modes"))
 		{
-			for(let i=0; i<cache["/Console/Aux_Outputs/modes"].args.length; i++)
+			for(let i=0; i<cache.get("/Console/Aux_Outputs/modes").args.length; i++)
 			{
-				if(!cache["/Aux_Outputs/" + (i + 1) + "/Buss_Trim/name"])
+				if(!cache.has(`/Aux_Outputs/${i+1}/Buss_Trim/name`))
 				{
 					continue;
 				}
@@ -460,7 +458,7 @@ function startServer()
 				}
 				auxDetails.push({
 					"enabled": enabled,
-					"name": cache["/Aux_Outputs/" + (i + 1) + "/Buss_Trim/name"].args[0],
+					"name": cache.get(`/Aux_Outputs/${i+1}/Buss_Trim/name`).args[0],
 					"colour": colour,
 					"icon": icon
 				});
@@ -473,11 +471,11 @@ function startServer()
 	app.get('/channels', (req, res) => {
 
 		let channelDetails = [];
-		if(cache["/Console/Input_Channels"] != undefined)
+		if(cache.has("/Console/Input_Channels"))
 		{
-			for(let i=0; i<cache["/Console/Input_Channels"].args[0]; i++)
+			for(let i=0; i<cache.get("/Console/Input_Channels").args[0]; i++)
 			{
-				if(!cache["/Input_Channels/" + (i + 1) + "/Channel_Input/name"])
+				if(!cache.has(`/Input_Channels/${i+1}/Channel_Input/name`))
 				{
 					continue;
 				}
@@ -507,7 +505,7 @@ function startServer()
 				}
 				channelDetails.push({
 					"enabled": enabled,
-					"name": cache["/Input_Channels/" + (i + 1) + "/Channel_Input/name"].args[0],
+					"name": cache.get(`/Input_Channels/${i+1}/Channel_Input/name`).args[0],
 					"order": order,
 					"title": title,
 					"icon": icon
@@ -631,7 +629,7 @@ function startOSC()
 		//session has changed. Reload
 		if(oscMsg.address == "/Console/Session/!")
 		{
-			cache = [];
+			cache.clear();
 			loaded = false;
 			closeAllConnections();
 			fetchValues();
@@ -639,7 +637,7 @@ function startOSC()
 		}
 
 		//ignore messages that are already cached
-		if(cache[oscMsg.address] != undefined && JSON.stringify(cache[oscMsg.address]) == JSON.stringify(oscMsg))
+		if(cache.has(oscMsg.address) && JSON.stringify(cache.get(oscMsg.address)) == JSON.stringify(oscMsg))
 		{
 			if(config.debug)
 			{
@@ -666,9 +664,9 @@ function startOSC()
 
 		//respond from cache if a value exists
 		const key = oscMsg.address.slice(0,-2);
-		if(oscMsg.address.substr(-2) == "/?" && cache[key] != undefined)
+		if(oscMsg.address.substr(-2) == "/?" && cache.has(key))
 		{
-			broadcast(cache[key]);
+			broadcast(cache.get(key));
 			return;
 		}
 
@@ -836,7 +834,7 @@ function maybeCacheResponse(msg)
 	{
 		if(address.test(msg.address))
 		{
-			cache[msg.address] = msg;
+			cache.set(msg.address, msg);
 			if(config.debug)
 			{
 				console.log("Cached " + JSON.stringify(msg));
@@ -871,14 +869,14 @@ function addToObject(objectArray, position, key, value)
  */
 function loadNextRequiredParameter()
 {
-	if(cache["/Console/Input_Channels"] == undefined)
+	if(!cache.has("/Console/Input_Channels"))
 	{
 		//reguest channel count (amoung other things)
 		udpPort.send({address: "/Console/Channels/?", args: []}, config.desk.ip, config.desk.port);
 		return;
 	}
 
-	if(cache["/Console/Aux_Outputs/modes"] == undefined)
+	if(!cache.has("/Console/Aux_Outputs/modes"))
 	{
 		//request aux modes
 		udpPort.send({address: "/Console/Aux_Outputs/modes/?", args: []}, config.desk.ip, config.desk.port);
@@ -886,21 +884,21 @@ function loadNextRequiredParameter()
 	}
 
 	//request aux names
-	for(let i=1; i<=cache["/Console/Aux_Outputs/modes"].args.length; i++)
+	for(let i=1; i<=cache.get("/Console/Aux_Outputs/modes").args.length; i++)
 	{
-		if(cache["/Aux_Outputs/" + i + "/Buss_Trim/name"] == undefined)
+		if(!cache.has(`/Aux_Outputs/${i}/Buss_Trim/name`))
 		{
-			udpPort.send({address: "/Aux_Outputs/" + i + "/Buss_Trim/name/?", args: []}, config.desk.ip, config.desk.port);
+			udpPort.send({address: `/Aux_Outputs/${i}/Buss_Trim/name/?`, args: []}, config.desk.ip, config.desk.port);
 			return;
 		}
 	}
 
 	//request channel names
-	for(let i=1; i<=cache["/Console/Input_Channels"].args[0]; i++)
+	for(let i=1; i<=cache.get("/Console/Input_Channels").args[0]; i++)
 	{
-		if(cache["/Input_Channels/" + i + "/Channel_Input/name"] == undefined)
+		if(!cache.has(`/Input_Channels/${i}/Channel_Input/name`))
 		{
-			udpPort.send({address: "/Input_Channels/" + i + "/Channel_Input/name/?", args: []}, config.desk.ip, config.desk.port);
+			udpPort.send({address: `/Input_Channels/${i}/Channel_Input/name/?`, args: []}, config.desk.ip, config.desk.port);
 			return;
 		}
 	}
@@ -947,15 +945,15 @@ function primeCache()
 				}
 
 				//request level
-				if(cache["/Input_Channels/" + (channel+1) + "/Aux_Send/" + (aux+1) + "/send_level"] == undefined)
+				if(!cache.has(`/Input_Channels/${channel+1}/Aux_Send/${aux+1}/send_level`))
 				{
-					udpPort.send({address: "/Input_Channels/" + (channel+1) + "/Aux_Send/" + (aux+1) + "/send_level/?", args: []}, config.desk.ip, config.desk.port);
+					udpPort.send({address: `/Input_Channels/${channel+1}/Aux_Send/${aux+1}/send_level/?`, args: []}, config.desk.ip, config.desk.port);
 					return;
 				}
 				//request pan
-				if(cache["/Input_Channels/" + (channel+1) + "/Aux_Send/" + (aux+1) + "/send_pan"] == undefined)
+				if(!cache.has(`/Input_Channels/${channel+1}/Aux_Send/${aux+1}/send_pan`))
 				{
-					udpPort.send({address: "/Input_Channels/" + (channel+1) + "/Aux_Send/" + (aux+1) + "/send_pan/?", args: []}, config.desk.ip, config.desk.port);
+					udpPort.send({address: `/Input_Channels/${channel+1}/Aux_Send/${aux+1}/send_pan/?`, args: []}, config.desk.ip, config.desk.port);
 					return;
 				}
 			}
@@ -1002,7 +1000,7 @@ function processPlugins(oscMsg)
 {
 	for(const plugin of plugins)
 	{
-		let response = plugin.handleOSC(oscMsg, {broadcast:broadcast, cache:cache, send: sendUDP});
+		let response = plugin.handleOSC(oscMsg, {broadcast: broadcast, cache: cache, send: sendUDP});
 		if(response === false)
 		{
 			return false;

@@ -41,7 +41,7 @@ class copyChannelLabels
 		webmixer.broadcast(osc);
 
 		//update cache with new message
-		webmixer.cache[osc.address] = osc;
+		webmixer.cache.set(osc.address, osc);
 	}
 }
 
