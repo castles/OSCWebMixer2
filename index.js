@@ -1,17 +1,18 @@
 "use strict";
 
-const osc = require("osc"),
-express = require("express"),
-http = require('http'),
-webSocket = require("ws"),
-fs = require('fs'),
-{ ColorTranslator, Harmony, Mix } = require('colortranslator');
+const os = require("os");
+const osc = require("osc");
+const express = require("express");
+const http = require('http');
+const webSocket = require("ws");
+const fs = require('fs');
+
+const { ColorTranslator, Harmony, Mix } = require('colortranslator');
 
 /**
  * Stores global configuration for webmixer
  */
-let config = {};
-loadConfig();
+let config = loadConfig();
 
 /**
  * the osc.js UDP Listening Port
@@ -554,7 +555,7 @@ function writeConfig()
  */
 function loadConfig()
 {
-	let _config = {
+	let defaultConfig = {
 		debug: false,
 		server: {
 			port: 80
@@ -568,12 +569,15 @@ function loadConfig()
 		},
 		external: []
 	};
+
 	if(fs.existsSync("config.json"))
 	{
-		_config = fs.readFileSync('config.json', "utf8");
-		_config = JSON.parse(_config);
+		let configFromFile = JSON.parse(
+			fs.readFileSync("config.json", "utf-8")
+		)
+		return configFromFile;
 	}
-	config = _config;
+	return defaultConfig;
 }
 
 /**
