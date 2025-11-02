@@ -34,6 +34,10 @@ function updateCheckboxHiddenField(e)
 	e.target.nextElementSibling.value = e.target.checked;
 }
 
+function clearExternals() {
+	externalDiv.innerHTML = ""
+}
+
 /**
  * Creates an external device and populates the values
  * @param {string} externalName
@@ -487,6 +491,7 @@ function loadConfig()
 	
 			for(let external of json.external)
 			{
+				clearExternals();
 				createExternal(external.broadcast, external.name, external.ip, external.loopback, external.port);
 			}
 		});
