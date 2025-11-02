@@ -50,6 +50,15 @@ let currentSnapshotName = "";
 let currentSnapshot = -1;
 
 /**
+ * Helper function for logging debug messages to console.
+ * @param {string} msg - the log message to send
+ */
+function logDebug(msg) {
+	config.debug && console.debug(`[DEBUG] ${msg}`);
+}
+
+
+/**
 * Get the IP addresses for this device on the network.
 * @returns string[]
 */
@@ -81,12 +90,12 @@ for (const plugin of pluginFiles)
 	//ignore files that start with underscore
 	if(plugin.substring(0,1) == "_")
 	{
-		console.log("Not loading \"" + plugin + "\" plugin.");
+		console.log(`Not loading "${plugin}" plugin.`);
 		continue;
 	}
 	if(plugin.slice(-3) != ".js")
 	{
-		console.log("Ignoring \"" + plugin + "\" in plugin directory.");
+		console.log(`Ignoring "${plugin}" in plugin directory.`);
 		continue;
 	}
 	let plug = require('./plugins/' + plugin);
@@ -196,10 +205,7 @@ function startServer()
 		//save the new connection
 		connections.push(socket);
 
-		if(config.debug)
-		{
-			console.debug("New Connection");
-		}
+		logDebug("New websockets connection")
 
 		//send config for new connections
 		socket.send(buildConfig());
@@ -208,19 +214,12 @@ function startServer()
 		socket.on('message', function message(data)
 		{
 			let oscMsg = JSON.parse(data);
-
-			if(config.debug)
-			{
-				console.debug("Message recieved from socket client: " + JSON.stringify(oscMsg));
-			}
+			logDebug("Message recieved from socket client: " + JSON.stringify(oscMsg));
 
 			//ignore messages that are already cached
 			if(cache.has(oscMsg.address) && JSON.stringify(cache.get(oscMsg.address)) == JSON.stringify(oscMsg))
 			{
-				if(config.debug)
-				{
-					console.log("Message already in cache " + JSON.stringify(oscMsg));
-				}
+				logDebug("Message already in cache " + JSON.stringify(oscMsg));
 				return;
 			}
 
@@ -541,10 +540,7 @@ function writeConfig()
 	{
 		throw err;
 	}
-	if(config.debug)
-	{
-		console.log("Config Saved.");
-	}
+	logDebug("Config Saved.");
 }
 
 /**
@@ -591,11 +587,8 @@ function fetchValues()
 	const osc = {address: "/Console/Channels/?", args: []};
 	udpPort.send(osc, config.desk.ip, config.desk.port);
 
-	if(config.debug)
-	{
-		console.log("Requesting channels from Mixing Desk");
-	}
-
+	logDebug("Requesting channels from Mixing Desk");
+	
 	setTimeout(fetchValues, 3000);
 }
 
@@ -621,10 +614,7 @@ function startOSC()
 
 	udpPort.on("message", function(oscMsg, timeTag, info)
 	{
-		if(config.debug)
-		{
-			console.log("Message received over UDP: " + JSON.stringify(oscMsg));
-		}
+		logDebug("Message received over UDP: " + JSON.stringify(oscMsg));
 
 		//session has changed. Reload
 		if(oscMsg.address == "/Console/Session/!")
@@ -639,10 +629,7 @@ function startOSC()
 		//ignore messages that are already cached
 		if(cache.has(oscMsg.address) && JSON.stringify(cache.get(oscMsg.address)) == JSON.stringify(oscMsg))
 		{
-			if(config.debug)
-			{
-				console.log("Message already in cache " + JSON.stringify(oscMsg));
-			}
+			logDebug("Message already in cache " + JSON.stringify(oscMsg));
 			return;
 		}
 
@@ -701,7 +688,7 @@ function processSnapshotMsg(oscMsg)
 			return;
 		}
 
-		//request the names for the current snapshots. We will use the resonse to store the snapshot name below.
+		//request the names for the current snapshots. We will use the response to store the snapshot name below.
 		udpPort.send({address: "/Snapshots/names/?", args: []}, config.desk.ip, config.desk.port);
 
 		return;
@@ -761,10 +748,7 @@ function broadcast(oscMsg, source)
 	if(config.desk.ip != source)
 	{
 		udpPort.send(oscMsg, config.desk.ip, config.desk.port);
-		if(config.debug)
-		{
-			console.log("Sent " + JSON.stringify(oscMsg) + " to " + config.desk.ip + ":" + config.desk.port + " (Mixing Desk)");
-		}
+		logDebug(`Sent ${JSON.stringify(oscMsg)} to Mixing Desk (${config.desk.ip}:${config.desk.port})`);
 	}
 
 	//notify all external devices
@@ -775,10 +759,7 @@ function broadcast(oscMsg, source)
 			if(external.broadcast && (external.loopback || external.ip != source))
 			{
 				udpPort.send(oscMsg, external.ip, external.port);
-				if(config.debug)
-				{
-					console.log("Sent " + JSON.stringify(oscMsg) + " to " + external.ip + ":" + external.port + " (" + external.name + ")");
-				}
+				logDebug(`Sent ${JSON.stringify(oscMsg)} to External "${external.name}" (${external.ip}:${external.port})`);
 			}
 		}
 	}
@@ -797,10 +778,7 @@ function broadcast(oscMsg, source)
 			if(connection != source)
 			{
 				connection.send(JSON.stringify(oscMsg));
-				if(config.debug)
-				{
-					console.log("Sent " + JSON.stringify(oscMsg) + " to socket " + validConnections.length);
-				}
+				logDebug(`Sent ${JSON.stringify(oscMsg)} to socket ${validConnections.length}`);
 			}
 		}
 	});
@@ -835,10 +813,7 @@ function maybeCacheResponse(msg)
 		if(address.test(msg.address))
 		{
 			cache.set(msg.address, msg);
-			if(config.debug)
-			{
-				console.log("Cached " + JSON.stringify(msg));
-			}
+			logDebug(`Cached ${JSON.stringify(msg)}`);
 			return;
 		}
 	}
@@ -923,10 +898,8 @@ let cachePrimeInterval = null;
  */
 function primeCache()
 {
-	if(config.debug)
-	{
-		console.log("Priming Cache");
-	}
+	logDebug("Priming Cache");
+
 	//request all aux level and pan values if they have been saved in config
 	if(config.channels && config.auxilaries)
 	{
@@ -962,10 +935,7 @@ function primeCache()
 
 	clearInterval(cachePrimeInterval);
 
-	if(config.debug)
-	{
-		console.log("Cache Primed");
-	}
+	logDebug("Cache Primed");
 }
 
 /**
@@ -982,10 +952,7 @@ function sendUDP(name, msg)
 			if(external.name == name)
 			{
 				udpPort.send(msg, external.ip, external.port);
-				if(config.debug)
-				{
-					console.log("Sent " + JSON.stringify(msg) + " to " + external.ip + ":" + external.port + " (" + external.name + ")");
-				}
+					logDebug(`Sent ${JSON.stringify(msg)} to External "${external.name}" (${external.ip}:${external.port})`);
 			}
 		}
 	}
