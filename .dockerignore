@@ -1,0 +1,10 @@
+.vscode/
+.idea/
+.git/
+
+.DS_Store
+._* 
+
+node_modules/
+config.json
+.env*
