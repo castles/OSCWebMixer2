@@ -1,13 +1,12 @@
 "use strict";
 
-const os = require("os");
 const osc = require("osc");
 const express = require("express");
 const http = require('http');
 const webSocket = require("ws");
 const fs = require('fs');
 
-const { ColorTranslator, Harmony, Mix } = require('colortranslator');
+const { getMainIPAddress, addToObject, generateColour } = require('./lib/utils.js');
 
 /**
  * Stores global configuration for webmixer
@@ -57,30 +56,6 @@ function logDebug(msg) {
 	config.debug && console.debug(`[DEBUG] ${msg}`);
 }
 
-
-/**
-* Get the IP addresses for this device on the network.
-* @returns string[]
-*/
-function getIPAddresses() {
-	const interfaces = os.networkInterfaces();
-
-	const ipAddresses = Object.values(interfaces)
-	.flat()
-	.filter(addr => addr.family === "IPv4" && !addr.internal)
-	.map(addr => addr.address);
-
-	return ipAddresses;
-}
-
-/**
- * Get the IP address of this device's main network interface.
- * @returns string
- */
-function getMainIPAddress() {
-	return getIPAddresses()[0];
-}
-
 const mixServerIP = getMainIPAddress();
 
 let plugins = [];
@@ -103,22 +78,6 @@ for (const plugin of pluginFiles)
 }
 
 /**
- * Generate a hex colour for an aux
- * @param {int} number
- * @returns
- */
-function generateColour(number)
-{
-	let total = 16;
-	if(cache.has("/Console/Aux_Outputs/modes"))
-	{
-		total = cache.get("/Console/Aux_Outputs/modes").args.length;
-	}
-
-	return new ColorTranslator('hsl(' + ((360 / total) * number) + ' 50% 40%)').HEX;
-}
-
-/**
  * Build initial configuration for new connections
  * @returns - the initial configuration
  */
@@ -127,14 +86,15 @@ function buildConfig()
 	let auxilaries = [];
 	if(cache.has("/Console/Aux_Outputs/modes") && config.auxilaries != undefined)
 	{
-		for(const [index, mode] of cache.get("/Console/Aux_Outputs/modes").args.entries())
+		let auxModes = cache.get("/Console/Aux_Outputs/modes").args;
+		for(const [index, mode] of auxModes.entries())
 		{
 			auxilaries.push({
 				enabled: config.auxilaries[index] ? config.auxilaries[index].enabled : true,
 				label: cache.get(`/Aux_Outputs/${index+1}/Buss_Trim/name`).args[0],
 				channel: index + 1,
 				stereo: mode == 2,
-				colour: config.auxilaries[index] ? config.auxilaries[index].colour : generateColour(index),
+				colour: config.auxilaries[index] ? config.auxilaries[index].colour : generateColour(auxModes.length, index),
 				icon: config.auxilaries[index] ? config.auxilaries[index].icon : ""
 			});
 		}
@@ -430,7 +390,8 @@ function startServer()
 
 		if(cache.has("/Console/Aux_Outputs/modes"))
 		{
-			for(let i=0; i<cache.get("/Console/Aux_Outputs/modes").args.length; i++)
+			let auxModes = cache.get("/Console/Aux_Outputs/modes").args;
+			for(let i=0; i<auxModes.length; i++)
 			{
 				if(!cache.has(`/Aux_Outputs/${i+1}/Buss_Trim/name`))
 				{
@@ -438,7 +399,7 @@ function startServer()
 				}
 
 				let enabled = true;
-				let colour = generateColour(i);
+				let colour = generateColour(auxModes.length, i);
 				let icon = "";
 				if(config.auxilaries && config.auxilaries[i])
 				{
@@ -817,25 +778,6 @@ function maybeCacheResponse(msg)
 			return;
 		}
 	}
-}
-
-/**
- * Add or update key: value to an object at a position in an array
- * @param {object} objectArray - the object to add to
- * @param {int} position - the position of the object in an array
- * @param {string} key - the key to set
- * @param {int|float|string} value - the value of the key to set
- */
-function addToObject(objectArray, position, key, value)
-{
-	if(objectArray[position] != undefined)
-	{
-		objectArray[position][key] = value;
-		return;
-	}
-	objectArray[position] = {
-		[key]: value
-	};
 }
 
 /**
