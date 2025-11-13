@@ -181,6 +181,7 @@ configForm.addEventListener("submit", (e) => {
 	{
 		e.preventDefault();
 	}
+	loadConfig();
 });
 
 /**
@@ -666,7 +667,6 @@ function onOpen()
 {
 	document.body.classList.remove("disconnected");
 
-	loadConfig();
 	fetchAux();
 	fetchChannels();
 }
@@ -682,7 +682,7 @@ function noConnection()
 		ws.close();
 	}
 	clearTimeout(timeout);
-	timeout = setTimeout(startWebsocket, 2000);
+	timeout = setTimeout(startWebsocket, 5000);
 	document.body.classList.add("disconnected");
 }
 
@@ -703,8 +703,5 @@ function startWebsocket()
  */
 document.addEventListener("DOMContentLoaded", function()
 {
-	setTimeout(function(){
-		startWebsocket();
-	}, 1000);
-
+	startWebsocket();
 });
