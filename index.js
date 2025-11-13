@@ -6,6 +6,7 @@ const http = require('http');
 const webSocket = require("ws");
 const fs = require('fs');
 
+const Logger = require('./lib/logger.js');
 const { getMainIPAddress, addToObject, generateColour } = require('./lib/utils.js');
 
 /**
@@ -49,12 +50,9 @@ let currentSnapshotName = "";
 let currentSnapshot = -1;
 
 /**
- * Helper function for logging debug messages to console.
- * @param {string} msg - the log message to send
+ * Logs messages to the console
  */
-function logDebug(msg) {
-	config.debug && console.debug(`[DEBUG] ${msg}`);
-}
+const logger = new Logger(config.debug, false);
 
 const mixServerIP = getMainIPAddress();
 
@@ -65,12 +63,12 @@ for (const plugin of pluginFiles)
 	//ignore files that start with underscore
 	if(plugin.substring(0,1) == "_")
 	{
-		console.log(`Not loading "${plugin}" plugin.`);
+		logger.info(`Not loading "${plugin}" plugin.`);
 		continue;
 	}
 	if(plugin.slice(-3) != ".js")
 	{
-		console.log(`Ignoring "${plugin}" in plugin directory.`);
+		logger.info(`Ignoring "${plugin}" in plugin directory.`);
 		continue;
 	}
 	let plug = require('./plugins/' + plugin);
@@ -165,7 +163,7 @@ function startServer()
 		//save the new connection
 		connections.push(socket);
 
-		logDebug("New websockets connection")
+		logger.debug("New websockets connection")
 
 		//send config for new connections
 		socket.send(buildConfig());
@@ -174,12 +172,12 @@ function startServer()
 		socket.on('message', function message(data)
 		{
 			let oscMsg = JSON.parse(data);
-			logDebug("Message recieved from socket client: " + JSON.stringify(oscMsg));
+			logger.debug("Message recieved from socket client: " + JSON.stringify(oscMsg));
 
 			//ignore messages that are already cached
 			if(cache.has(oscMsg.address) && JSON.stringify(cache.get(oscMsg.address)) == JSON.stringify(oscMsg))
 			{
-				logDebug("Message already in cache " + JSON.stringify(oscMsg));
+				logger.debug("Message already in cache " + JSON.stringify(oscMsg));
 				return;
 			}
 
@@ -207,7 +205,7 @@ function startServer()
 	//when a websocket error occurs
 	wss.on("error", function (err)
 	{
-		console.debug("wss error", err);
+		logger.error("wss error", err);
 	});
 
 	//when a post request occurs in the admin area
@@ -357,10 +355,10 @@ function startServer()
 			//close web server
 			server.close();
 
-			console.log("Server Port has changed. Please visit http://" + mixServerIP + ":" + config.server.port + " to continue.");
+			logger.warn(`Server port has changed. Please visit http://${mixServerIP}:${config.server.port} to continue.`);
 
 			//respond with redirection to the new port
-			res.send('<script>document.location.href="http://' + mixServerIP + ':' + config.server.port + '/admin";</script>');
+			res.send(`<script>document.location.href="http://${mixServerIP}:${config.server.port}/admin";</script>`);
 
 			startServer();
 			return;
@@ -475,7 +473,7 @@ function startServer()
 		res.json(channelDetails);
 	});
 
-	let url = "http://" + mixServerIP;
+	let url = `http://${mixServerIP}`;
 	if(config.server.port != 80)
 	{
 		url += ":" + config.server.port;
@@ -484,11 +482,13 @@ function startServer()
 	//if this is the first time webmixer has been run
 	if(!fs.existsSync("config.json"))
 	{
-		console.log("\n\nWeb Server Ready.\nPlease Visit " + url + "/admin in a web browser\nto set up OSC Web Mixer.");
+		logger.info(`Web Server Ready. Please visit ${url}/admin in a web browser to set up OSC Web Mixer.`);
 		return;
 	}
 
-	console.log("\n\nWeb Server Ready.\nVisit " + url + "/admin in a web browser to adjust configuration.\n\nVisit " + url + " in a web browser to access OSC Web Mixer.\nPlease make sure the device you want to use is on the same network.");
+	logger.info("Web Server Ready.");
+	logger.info(`Visit ${url} in a web browser to access OSC Web Mixer.`);
+	logger.info(`Visit ${url}/admin in a web browser to adjust configuration.`);
 }
 
 /**
@@ -501,7 +501,7 @@ function writeConfig()
 	{
 		throw err;
 	}
-	logDebug("Config Saved.");
+	logger.debug("Config Saved.");
 }
 
 /**
@@ -548,7 +548,7 @@ function fetchValues()
 	const osc = {address: "/Console/Channels/?", args: []};
 	udpPort.send(osc, config.desk.ip, config.desk.port);
 
-	logDebug("Requesting channels from Mixing Desk");
+	logger.debug("Requesting channels from Mixing Desk");
 	
 	setTimeout(fetchValues, 3000);
 }
@@ -567,7 +567,7 @@ function startOSC()
 	{
 		if(err.code == "EHOSTDOWN" || err.code == "EHOSTUNREACH")
 		{
-			console.log(err.address + " is not responding");
+			logger.error(err.address + " is not responding");
 			return;
 		}
 		console.error("UDP error", err);
@@ -575,7 +575,7 @@ function startOSC()
 
 	udpPort.on("message", function(oscMsg, timeTag, info)
 	{
-		logDebug("Message received over UDP: " + JSON.stringify(oscMsg));
+		logger.debug("Message received over UDP: " + JSON.stringify(oscMsg));
 
 		//session has changed. Reload
 		if(oscMsg.address == "/Console/Session/!")
@@ -590,7 +590,7 @@ function startOSC()
 		//ignore messages that are already cached
 		if(cache.has(oscMsg.address) && JSON.stringify(cache.get(oscMsg.address)) == JSON.stringify(oscMsg))
 		{
-			logDebug("Message already in cache " + JSON.stringify(oscMsg));
+			logger.debug("Message already in cache " + JSON.stringify(oscMsg));
 			return;
 		}
 
@@ -709,7 +709,7 @@ function broadcast(oscMsg, source)
 	if(config.desk.ip != source)
 	{
 		udpPort.send(oscMsg, config.desk.ip, config.desk.port);
-		logDebug(`Sent ${JSON.stringify(oscMsg)} to Mixing Desk (${config.desk.ip}:${config.desk.port})`);
+		logger.debug(`Sent ${JSON.stringify(oscMsg)} to Mixing Desk (${config.desk.ip}:${config.desk.port})`);
 	}
 
 	//notify all external devices
@@ -720,7 +720,7 @@ function broadcast(oscMsg, source)
 			if(external.broadcast && (external.loopback || external.ip != source))
 			{
 				udpPort.send(oscMsg, external.ip, external.port);
-				logDebug(`Sent ${JSON.stringify(oscMsg)} to External "${external.name}" (${external.ip}:${external.port})`);
+				logger.debug(`Sent ${JSON.stringify(oscMsg)} to External "${external.name}" (${external.ip}:${external.port})`);
 			}
 		}
 	}
@@ -739,7 +739,7 @@ function broadcast(oscMsg, source)
 			if(connection != source)
 			{
 				connection.send(JSON.stringify(oscMsg));
-				logDebug(`Sent ${JSON.stringify(oscMsg)} to socket ${validConnections.length}`);
+				logger.debug(`Sent ${JSON.stringify(oscMsg)} to socket ${validConnections.length}`);
 			}
 		}
 	});
@@ -774,7 +774,7 @@ function maybeCacheResponse(msg)
 		if(address.test(msg.address))
 		{
 			cache.set(msg.address, msg);
-			logDebug(`Cached ${JSON.stringify(msg)}`);
+			logger.debug(`Cached ${JSON.stringify(msg)}`);
 			return;
 		}
 	}
@@ -828,7 +828,7 @@ function loadNextRequiredParameter()
 
 	loaded = true;
 
-	console.log("Webmixer ready to use.");
+	logger.info("Webmixer ready to use.");
 }
 
 let cachePrimeInterval = null;
@@ -840,7 +840,7 @@ let cachePrimeInterval = null;
  */
 function primeCache()
 {
-	logDebug("Priming Cache");
+	logger.debug("Priming Cache");
 
 	//request all aux level and pan values if they have been saved in config
 	if(config.channels && config.auxilaries)
@@ -877,7 +877,7 @@ function primeCache()
 
 	clearInterval(cachePrimeInterval);
 
-	logDebug("Cache Primed");
+	logger.debug("Cache Primed");
 }
 
 /**
@@ -894,7 +894,7 @@ function sendUDP(name, msg)
 			if(external.name == name)
 			{
 				udpPort.send(msg, external.ip, external.port);
-					logDebug(`Sent ${JSON.stringify(msg)} to External "${external.name}" (${external.ip}:${external.port})`);
+					logger.debug(`Sent ${JSON.stringify(msg)} to External "${external.name}" (${external.ip}:${external.port})`);
 			}
 		}
 	}
