@@ -490,9 +490,9 @@ function loadConfig()
 			deskReceivePort.value = deskPort;
 			debug.checked = json.debug == true;
 	
+			clearExternals();
 			for(let external of json.external)
 			{
-				clearExternals();
 				createExternal(external.broadcast, external.name, external.ip, external.loopback, external.port);
 			}
 		});
