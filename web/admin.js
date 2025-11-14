@@ -654,6 +654,8 @@ function onMessage(e)
 	}
 }
 
+const WEBSOCKET_TIMEOUT = 2000;
+
 /**
  * When socket is connected
  */
@@ -674,6 +676,9 @@ function onOpen()
 function noConnection()
 {
 	document.body.classList.add("disconnected");
+
+	clearTimeout(timeout);
+	timeout = setTimeout(startWebsocket, WEBSOCKET_TIMEOUT);
 }
 
 /**
@@ -693,7 +698,7 @@ function startWebsocket()
 
 	//retry connection in 2 seconds
 	clearTimeout(timeout);
-	timeout = setTimeout(startWebsocket, 2000);
+	timeout = setTimeout(startWebsocket, WEBSOCKET_TIMEOUT);
 }
 
 
