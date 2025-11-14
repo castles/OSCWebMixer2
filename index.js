@@ -5,7 +5,8 @@ express = require("express"),
 http = require('http'),
 webSocket = require("ws"),
 fs = require('fs'),
-{ ColorTranslator, Harmony, Mix } = require('colortranslator');
+{ ColorTranslator, Harmony, Mix } = require('colortranslator'),
+ora = require("ora");
 
 /**
  * Stores global configuration for webmixer
@@ -47,6 +48,24 @@ let currentSnapshotName = "";
  * @type int
  */
 let currentSnapshot = -1;
+
+/**
+ * The main http server
+ * @type {http.Server}
+ */
+let server = null;
+
+/**
+ * The socket server
+ * @type {WebSocketServer}
+ */
+let wss = null;
+
+/**
+ * Loading Spinner
+ * @type {import('ora').Ora}
+ */
+let spinner = null;
 
 /**
 * Get the IP addresses for this device on the network.
@@ -176,79 +195,7 @@ function startServer()
 	}));
 
 	// Create the web server
-	let server = http.createServer(app).listen(config.server.port);
-
-	// Create the web socket server
-	let wss = new webSocket.Server({
-		server: server
-	});
-
-	//when a webmixer user has connected
-	wss.on("connection", function(socket)
-	{
-		//only allow connections once everything has loaded
-		if(!loaded)
-		{
-			socket.close();
-			return;
-		}
-
-		//save the new connection
-		connections.push(socket);
-
-		if(config.debug)
-		{
-			console.debug("New Connection");
-		}
-
-		//send config for new connections
-		socket.send(buildConfig());
-
-		//when a message has been sent from a webmixer user
-		socket.on('message', function message(data)
-		{
-			let oscMsg = JSON.parse(data);
-
-			if(config.debug)
-			{
-				console.debug("Message recieved from socket client: " + JSON.stringify(oscMsg));
-			}
-
-			//ignore messages that are already cached
-			if(cache[oscMsg.address] != undefined && JSON.stringify(cache[oscMsg.address]) == JSON.stringify(oscMsg))
-			{
-				if(config.debug)
-				{
-					console.log("Message already in cache " + JSON.stringify(oscMsg));
-				}
-				return;
-			}
-
-			oscMsg = processPlugins(oscMsg);
-			if(oscMsg === false)
-			{
-				return;
-			}
-
-			//respond from cache if a value exists
-			const key = oscMsg.address.slice(0,-2);
-			if(oscMsg.address.substr(-2) == "/?" && cache[key] != undefined)
-			{
-				this.send(JSON.stringify(cache[key]));
-				return;
-			}
-
-			maybeCacheResponse(oscMsg);
-
-			broadcast(oscMsg, this);
-		});
-	});
-
-	//when a websocket error occurs
-	wss.on("error", function (err)
-	{
-		console.debug("wss error", err);
-	});
+	server = http.createServer(app).listen(config.server.port);
 
 	//when a post request occurs in the admin area
 	app.post('/admin', (req, res) => {
@@ -517,19 +464,105 @@ function startServer()
 		res.json(channelDetails);
 	});
 
+	//if this is the first time webmixer has been run
+	if(!fs.existsSync("config.json"))
+	{
+		console.log("\n\nWeb Server Ready.\nPlease Visit " + getServerURL() + "/admin in a web browser to set up OSC Web Mixer.");
+		return;
+	}
+}
+
+/**
+ * Get the current server url
+ */
+function getServerURL()
+{
 	let url = "http://" + mixServerIP;
 	if(config.server.port != 80)
 	{
 		url += ":" + config.server.port;
 	}
+	return url;
+}
 
-	//if this is the first time webmixer has been run
-	if(!fs.existsSync("config.json"))
+/**
+ * Start WebSocket Server
+ */
+function startWebSocket()
+{
+	// Create the web socket server
+	wss = new webSocket.Server({
+		server: server
+	});
+
+	//when a webmixer user has connected
+	wss.on("connection", function(socket)
 	{
-		console.log("\n\nWeb Server Ready.\nPlease Visit " + url + "/admin in a web browser\nto set up OSC Web Mixer.");
-		return;
-	}
+		//only allow connections once everything has loaded
+		if(!loaded)
+		{
+			socket.close();
+			return;
+		}
 
+		//save the new connection
+		connections.push(socket);
+
+		if(config.debug)
+		{
+			console.debug("New Connection");
+		}
+
+		//send config for new connections
+		socket.send(buildConfig());
+
+		//when a message has been sent from a webmixer user
+		socket.on('message', function message(data)
+		{
+			let oscMsg = JSON.parse(data);
+
+			if(config.debug)
+			{
+				console.debug("Message recieved from socket client: " + JSON.stringify(oscMsg));
+			}
+
+			//ignore messages that are already cached
+			if(cache[oscMsg.address] != undefined && JSON.stringify(cache[oscMsg.address]) == JSON.stringify(oscMsg))
+			{
+				if(config.debug)
+				{
+					console.log("Message already in cache " + JSON.stringify(oscMsg));
+				}
+				return;
+			}
+
+			oscMsg = processPlugins(oscMsg);
+			if(oscMsg === false)
+			{
+				return;
+			}
+
+			//respond from cache if a value exists
+			const key = oscMsg.address.slice(0,-2);
+			if(oscMsg.address.substr(-2) == "/?" && cache[key] != undefined)
+			{
+				this.send(JSON.stringify(cache[key]));
+				return;
+			}
+
+			maybeCacheResponse(oscMsg);
+
+			broadcast(oscMsg, this);
+		});
+	});
+
+	//when a websocket error occurs
+	wss.on("error", function (err)
+	{
+		console.debug("wss error", err);
+	});
+
+	const url = getServerURL();
 	console.log("\n\nWeb Server Ready.\nVisit " + url + "/admin in a web browser to adjust configuration.\n\nVisit " + url + " in a web browser to access OSC Web Mixer.\nPlease make sure the device you want to use is on the same network.");
 }
 
@@ -563,7 +596,7 @@ function loadConfig()
 			port: 8000
 		},
 		desk: {
-			ip: "192.168.0.5",
+			ip: "",
 			port: 9000
 		},
 		external: []
@@ -675,6 +708,7 @@ function startOSC()
 	udpPort.on("ready", fetchValues);
 
 	udpPort.open();
+	spinner = ora("Loading values from mixing desk...").start();
 }
 
 /**
@@ -910,7 +944,38 @@ function loadNextRequiredParameter()
 
 	loaded = true;
 
-	console.log("Webmixer ready to use.");
+	spinner.succeed("");
+
+	if(!config.auxilaries || !config.channels)
+	{
+		config.auxilaries = [];
+		for(const [index, mode] of cache["/Console/Aux_Outputs/modes"].args.entries())
+		{
+			config.auxilaries.push({
+				enabled: true,
+				colour: generateColour(index),
+				icon: ""
+			});
+		}
+
+		config.channels = [];
+		for(let i=0; i<cache["/Console/Input_Channels"].args[0]; i++)
+		{
+			if(cache["/Input_Channels/" + (i + 1) + "/Channel_Input/name"] != undefined)
+			{
+				config.channels.push({
+					enabled: true,
+					order: i,
+					title: "",
+					icon: ""
+				});
+			}
+		}
+
+		writeConfig();
+	}
+
+	startWebSocket();
 }
 
 let cachePrimeInterval = null;

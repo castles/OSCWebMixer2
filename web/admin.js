@@ -470,21 +470,21 @@ function loadConfig()
 	fetch("/config")
 		.then((response) => response.json())
 		.then((json) => {
-	
+
 			let deskPort = 9000;
 			if(json.desk.port != "")
 			{
 				deskPort = json.desk.port;
 			}
-	
+
 			ipAddress.value = json.server.ip;
 			serverPort.value = json.server.port;
 			oscReceivePort.value = json.osc.port;
 			deskSendPort.value = json.osc.port;
-			deskIP.value = json.desk.ip;
+			deskIP.value = json.desk.ip == "" ? json.server.ip.replace(/\.\d+$/, "") + "." : json.desk.ip;
 			deskReceivePort.value = deskPort;
 			debug.checked = json.debug == true;
-	
+
 			for(let external of json.external)
 			{
 				createExternal(external.broadcast, external.name, external.ip, external.loopback, external.port);
@@ -659,6 +659,8 @@ function onMessage(e)
  */
 function onOpen()
 {
+	clearTimeout(timeout);
+
 	document.body.classList.remove("disconnected");
 
 	loadConfig();
@@ -671,13 +673,6 @@ function onOpen()
  */
 function noConnection()
 {
-	// connection closed, discard old websocket and create a new one in 2s
-	if(ws)
-	{
-		ws.close();
-	}
-	clearTimeout(timeout);
-	timeout = setTimeout(startWebsocket, 2000);
 	document.body.classList.add("disconnected");
 }
 
@@ -686,20 +681,22 @@ function noConnection()
  */
 function startWebsocket()
 {
+	if(ws)
+	{
+		ws.close();
+	}
 	ws = new WebSocket("ws://" + document.location.host);
 	ws.onopen = onOpen;
 	ws.onmessage = onMessage;
 	ws.onclose = noConnection;
 	ws.onerror = noConnection;
+
+	//retry connection in 2 seconds
+	clearTimeout(timeout);
+	timeout = setTimeout(startWebsocket, 2000);
 }
 
-/**
- * When page has loaded
- */
-document.addEventListener("DOMContentLoaded", function()
-{
-	setTimeout(function(){
-		startWebsocket();
-	}, 1000);
 
-});
+startWebsocket();
+
+
