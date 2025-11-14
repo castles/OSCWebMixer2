@@ -37,8 +37,10 @@ This project has taken considerable time to create. If you find it useful and wo
 1. Download repository and navigate to the directory in a shell.
 2. Run "npm install" to install all the required modules.
 3. Run "node ." to start the server.
-4. Visit the admin URL in your browser to configure the server.
-5. Open the server IP address on another device and start mixing.
+5. Visit the admin URL in your browser to configure server and mixing desk. See below screenshot for mixing desk configuration.
+7. Open the server IP address on another device and start mixing.
+
+<img width="538" height="529" alt="webmixer-external-control" src="https://github.com/user-attachments/assets/c8c01ec9-e153-4555-a19f-ef87dcff3ee5" />
 
 ## Basic Setup Instructions For Docker
 1. Install Git and Docker 
