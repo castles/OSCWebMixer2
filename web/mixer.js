@@ -1,5 +1,7 @@
 "use strict";
 
+(() => {
+
 const channelsDiv = document.getElementById('channels'),
 auxSelect = document.getElementById('aux'),
 panCheckbox = document.getElementById("panning"),
@@ -7,10 +9,9 @@ auxiliaries = document.getElementById("auxiliaries"),
 snapshot = document.getElementById("snapshot");
 
 let ws = null,
-timeout = null;
-
-let channelInputs = null;
-let panInputs = null;
+timeout = null,
+channelInputs = null,
+panInputs = null;
 
 /**
  * Calculate the db value from the provided slider value.
@@ -71,6 +72,10 @@ function sliderChange(e)
 
 function sendOSC(address, args = [])
 {
+	if(ws.readyState != WebSocket.OPEN)
+	{
+		return;
+	}
 	ws.send(JSON.stringify({
 		"address": address,
 		"args": args
@@ -388,7 +393,21 @@ function startWebsocket()
 	ws.onmessage = onMessage;
 	ws.onclose = noConnection;
 	ws.onerror = noConnection;
+
+	/**
+	 * Safari on iOS 26.1 only connects to web socket every second page load. Calling startWebsocket
+	 * again seems to fix this. I don't know why and I can't find any other solutions.
+	 */
+	clearTimeout(timeout);
+	timeout = setTimeout(() => {
+		if(ws.readyState === WebSocket.CONNECTING)
+		{
+			startWebsocket();
+		}
+	}, 2000);
 }
+
+
 
 /**
  * When page has loaded
@@ -465,3 +484,5 @@ document.addEventListener("DOMContentLoaded", function()
 		}
 	});
 });
+
+})();

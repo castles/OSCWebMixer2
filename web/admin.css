@@ -335,6 +335,13 @@ nav a.selected
 	margin-top: 0px;
 }
 
+body.disconnected nav a[href="#aux"],
+body.disconnected nav a[href="#channels"],
+body.disconnected nav a[href="#additional-devices"]
+{
+	display: none;
+}
+
 #iconDialog > div
 {
 	display: grid;
