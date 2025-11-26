@@ -559,7 +559,7 @@ function fetchValues()
 function startOSC()
 {
 	udpPort = new osc.UDPPort({
-		localAddress: mixServerIP,
+		localAddress: "0.0.0.0",
 		localPort: config.osc.port
 	});
 
