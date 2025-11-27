@@ -1,10 +1,10 @@
 # OSCWebMixer2
 
-A rewrite of [OSCWebMixer](https://github.com/castles/OSCWebMixer) - A server that allows multiple web clients to control their own mix as well as external devices for a DiGiCo sound desk. It currently works with SD Series consoles.
+A rewrite of [OSCWebMixer](https://github.com/castles/OSCWebMixer) - A server that allows multiple web clients to control their own mix as well as external devices for a DiGiCo sound desk. It currently works with SD Series and Quantum consoles.
 
 ## What makes v2 better?
 
-* This new version uses the same iPad connection that is built into the SD consoles so it means you can use webmixer devices as well as the DiGiCo iPad apps at the same time. In-fact you can use multiple iPad apps simultaneously!
+* This new version uses the same iPad connection that is built into the SD/Quantum consoles so it means you can use webmixer devices as well as the DiGiCo iPad apps at the same time. In-fact you can use multiple iPad apps simultaneously!
 * All configuration is done in a browser instead of config files
 * Auxilaries and Channels can have icons assigned to them
 * Channels can be sorted
@@ -33,7 +33,7 @@ This project has taken considerable time to create. If you find it useful and wo
 
 ## Requirements
 
-* A SD Series DiGiCo Mixing desk.
+* A DiGiCo SD Series or Quantum Mixing desk.
 * A computer to run the server. Windows, macOS or Linux.
 * [GIT](https://git-scm.com/downloads/win) will need to be installed for Windows. [Node](https://nodejs.org/en/download/) must be installed. On macOS you can install node with [Homebrew](https://brew.sh/) (`brew install node`)
 * Server, Desk and other devices must all be on the same network
@@ -91,4 +91,8 @@ docker compose logs -f webmixer
 <details>
   <summary>How do I enable a plugin?</summary>
   Add a script into the plugin directory and make sure the filename doesn't start with an underscore. Restart webmixer and your plugin will be loaded.
+</details>
+<details>
+  <summary>Does OSCWebMixer2 also support DiGiCo S-Series consoles?</summary>
+  Currently, S-Series consoles are not supported by V2. For now, you will need to use <a href="https://github.com/castles/OSCWebMixer">version 1 of OSCWebMixer</a> with S-Series consoles.<br/>See <a href="https://github.com/castles/OSCWebMixer2/issues/4">this issue</a> for more information.
 </details>
