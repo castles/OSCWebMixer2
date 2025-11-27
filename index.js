@@ -532,7 +532,14 @@ function writeConfig()
  */
 function loadConfig()
 {
-	let defaultConfig = {
+	if(fs.existsSync("config.json"))
+	{
+		return JSON.parse(
+			fs.readFileSync("config.json", "utf-8")
+		)
+	}
+	
+	return {
 		debug: false,
 		server: {
 			port: 80
@@ -546,15 +553,6 @@ function loadConfig()
 		},
 		external: []
 	};
-
-	if(fs.existsSync("config.json"))
-	{
-		let configFromFile = JSON.parse(
-			fs.readFileSync("config.json", "utf-8")
-		)
-		return configFromFile;
-	}
-	return defaultConfig;
 }
 
 /**
