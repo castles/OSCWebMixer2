@@ -310,10 +310,10 @@ function startServer()
 			//close web server
 			server.close();
 
-			logger.warn(`Server port has changed. Please visit http://${mixServerIP}:${config.server.port} to continue.`);
+			logger.warn(`Server port has changed. Please visit http://${getServerURL()} to continue.`);
 
 			//respond with redirection to the new port
-			res.send(`<script>document.location.href="http://${mixServerIP}:${config.server.port}/admin";</script>`);
+			res.send(`<script>document.location.href="http://${getServerURL()}/admin";</script>`);
 
 			startServer();
 			return;
@@ -431,7 +431,7 @@ function startServer()
 	//if this is the first time webmixer has been run
 	if(!fs.existsSync("config.json"))
 	{
-		logger.info(`Web Server Ready. Please visit ${url}/admin in a web browser to set up OSC Web Mixer.`);
+		logger.info(`Web Server Ready. Please visit ${getServerURL()}/admin in a web browser to set up OSC Web Mixer.`);
 		return;
 	}
 }
