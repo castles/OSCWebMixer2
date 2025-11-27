@@ -34,6 +34,10 @@ function updateCheckboxHiddenField(e)
 	e.target.nextElementSibling.value = e.target.checked;
 }
 
+function clearExternals() {
+	externalDiv.innerHTML = ""
+}
+
 /**
  * Creates an external device and populates the values
  * @param {string} externalName
@@ -177,6 +181,7 @@ configForm.addEventListener("submit", (e) => {
 	{
 		e.preventDefault();
 	}
+	loadConfig();
 });
 
 /**
@@ -484,7 +489,8 @@ function loadConfig()
 			deskIP.value = json.desk.ip == "" ? json.server.ip.replace(/\.\d+$/, "") + "." : json.desk.ip;
 			deskReceivePort.value = deskPort;
 			debug.checked = json.debug == true;
-
+	
+			clearExternals();
 			for(let external of json.external)
 			{
 				createExternal(external.broadcast, external.name, external.ip, external.loopback, external.port);
@@ -665,7 +671,6 @@ function onOpen()
 
 	document.body.classList.remove("disconnected");
 
-	loadConfig();
 	fetchAux();
 	fetchChannels();
 }

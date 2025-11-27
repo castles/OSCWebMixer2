@@ -1,18 +1,18 @@
 "use strict";
 
-const osc = require("osc"),
-express = require("express"),
-http = require('http'),
-webSocket = require("ws"),
-fs = require('fs'),
-{ ColorTranslator, Harmony, Mix } = require('colortranslator'),
-ora = require("ora");
+const osc = require("osc");
+const express = require("express");
+const http = require('http');
+const webSocket = require("ws");
+const fs = require('fs');
+
+const Logger = require('./lib/logger.js');
+const { getMainIPAddress, addToObject, generateColour } = require('./lib/utils.js');
 
 /**
  * Stores global configuration for webmixer
  */
-let config = {};
-loadConfig();
+let config = loadConfig();
 
 /**
  * the osc.js UDP Listening Port
@@ -33,9 +33,9 @@ let loaded = false;
 
 /**
  * Stores OSC messages that have been cached
- * @type {Array}
+ * @type {Map}
  */
-let cache = [];
+let cache = new Map();
 
 /**
  * Stores the name of the current snapshot
@@ -48,6 +48,11 @@ let currentSnapshotName = "";
  * @type int
  */
 let currentSnapshot = -1;
+
+/**
+ * Logs messages to the console
+ */
+const logger = new Logger(config.debug, false);
 
 /**
  * The main http server
@@ -67,31 +72,7 @@ let wss = null;
  */
 let spinner = null;
 
-/**
-* Get the IP addresses for this device on the network.
-*/
-const getIPAddresses = () =>
-{
-	let os = require("os"),
-	interfaces = os.networkInterfaces(),
-	ipAddresses = [];
-
-	for (let deviceName in interfaces)
-	{
-		let addresses = interfaces[deviceName];
-		for (let i = 0; i < addresses.length; i++)
-		{
-			let addressInfo = addresses[i];
-			if(addressInfo.family === "IPv4" && !addressInfo.internal)
-			{
-				ipAddresses.push(addressInfo.address);
-			}
-		}
-	}
-	return ipAddresses;
-};
-
-const mixServerIP = getIPAddresses()[0];
+const mixServerIP = getMainIPAddress();
 
 let plugins = [];
 const pluginFiles = fs.readdirSync('./plugins')
@@ -100,32 +81,16 @@ for (const plugin of pluginFiles)
 	//ignore files that start with underscore
 	if(plugin.substring(0,1) == "_")
 	{
-		console.log("Not loading \"" + plugin + "\" plugin.");
+		logger.info(`Not loading "${plugin}" plugin.`);
 		continue;
 	}
 	if(plugin.slice(-3) != ".js")
 	{
-		console.log("Ignoring \"" + plugin + "\" in plugin directory.");
+		logger.info(`Ignoring "${plugin}" in plugin directory.`);
 		continue;
 	}
 	let plug = require('./plugins/' + plugin);
 	plugins.push(new plug());
-}
-
-/**
- * Generate a hex colour for an aux
- * @param {int} number
- * @returns
- */
-function generateColour(number)
-{
-	let total = 16;
-	if(cache["/Console/Aux_Outputs/modes"] != undefined)
-	{
-		total = cache["/Console/Aux_Outputs/modes"].args.length;
-	}
-
-	return new ColorTranslator('hsl(' + ((360 / total) * number) + ' 50% 40%)').HEX;
 }
 
 /**
@@ -135,31 +100,32 @@ function generateColour(number)
 function buildConfig()
 {
 	let auxilaries = [];
-	if(cache["/Console/Aux_Outputs/modes"] != undefined && config.auxilaries != undefined)
+	if(cache.has("/Console/Aux_Outputs/modes") && config.auxilaries != undefined)
 	{
-		for(const [index, mode] of cache["/Console/Aux_Outputs/modes"].args.entries())
+		let auxModes = cache.get("/Console/Aux_Outputs/modes").args;
+		for(const [index, mode] of auxModes.entries())
 		{
 			auxilaries.push({
 				enabled: config.auxilaries[index] ? config.auxilaries[index].enabled : true,
-				label: cache["/Aux_Outputs/" + (index + 1) + "/Buss_Trim/name"].args[0],
+				label: cache.get(`/Aux_Outputs/${index+1}/Buss_Trim/name`).args[0],
 				channel: index + 1,
 				stereo: mode == 2,
-				colour: config.auxilaries[index] ? config.auxilaries[index].colour : generateColour(index),
+				colour: config.auxilaries[index] ? config.auxilaries[index].colour : generateColour(auxModes.length, index),
 				icon: config.auxilaries[index] ? config.auxilaries[index].icon : ""
 			});
 		}
 	}
 
 	let channels = [];
-	if(cache["/Console/Input_Channels"] != undefined && config.channels != undefined)
+	if(cache.has("/Console/Input_Channels") && config.channels != undefined)
 	{
-		for(let i=0; i<cache["/Console/Input_Channels"].args[0]; i++)
+		for(let i=0; i<cache.get("/Console/Input_Channels").args[0]; i++)
 		{
-			if(cache["/Input_Channels/" + (i + 1) + "/Channel_Input/name"] != undefined)
+			if(cache.has(`/Input_Channels/${i+1}/Channel_Input/name`))
 			{
 				channels.push({
 					enabled: config.channels[i] ? config.channels[i].enabled : true,
-					label: cache["/Input_Channels/" + (i + 1) + "/Channel_Input/name"].args[0],
+					label: cache.get(`/Input_Channels/${i+1}/Channel_Input/name`).args[0],
 					channel: i + 1,
 					order: config.channels[i]?.order ?? i,
 					title: config.channels[i] ? config.channels[i].title : "",
@@ -281,19 +247,17 @@ function startServer()
 		{
 			for(let i=0; i<req.body.auxName.length; i++)
 			{
-
 				if(
-					cache["/Aux_Outputs/" + (i + 1) + "/Buss_Trim/name"] != undefined &&
-					(cache["/Aux_Outputs/" + (i + 1) + "/Buss_Trim/name"] == undefined || //name isn't currently cached
-					cache["/Aux_Outputs/" + (i + 1) + "/Buss_Trim/name"].args[0] != req.body.auxName[i]) //new name is different
+					cache.has(`/Aux_Outputs/${i+1}/Buss_Trim/name`) &&
+					cache.get(`/Aux_Outputs/${i+1}/Buss_Trim/name`).args[0] != req.body.auxName[i]
 				)
 				{
 					//store new name
-					cache["/Aux_Outputs/" + (i + 1) + "/Buss_Trim/name"].args[0] = req.body.auxName[i];
+					cache.get(`/Aux_Outputs/${i+1}/Buss_Trim/name`).args[0] = req.body.auxName[i];
 
 					//let other connections know about new name
 					broadcast({
-							"address": "/Aux_Outputs/" + (i + 1) + "/Buss_Trim/name",
+							"address": `/Aux_Outputs/${i+1}/Buss_Trim/name`,
 							"args": [
 								req.body.auxName[i]
 							]
@@ -308,17 +272,16 @@ function startServer()
 			for(let i=0; i<req.body.channelName.length; i++)
 			{
 				if(
-					cache["/Input_Channels/" + (i + 1) + "/Channel_Input/name"] &&
-					(cache["/Input_Channels/" + (i + 1) + "/Channel_Input/name"] == undefined || //name isn't currently cached
-					cache["/Input_Channels/" + (i + 1) + "/Channel_Input/name"].args[0] != req.body.channelName[i]) //new name is different
+					cache.has(`/Input_Channels/${i+1}/Channel_Input/name`) &&
+					cache.get(`/Input_Channels/${i+1}/Channel_Input/name`).args[0] != req.body.channelName[i]
 				)
 				{
 					//store new name
-					cache["/Input_Channels/" + (i + 1) + "/Channel_Input/name"].args[0] = req.body.channelName[i];
+					cache.get(`/Input_Channels/${i+1}/Channel_Input/name`).args[0] = req.body.channelName[i];
 
 					//let other connections know about new name
 					broadcast({
-							"address": "/Input_Channels/" + (i + 1) + "/Channel_Input/name",
+							"address": `/Input_Channels/${i+1}/Channel_Input/name`,
 							"args": [
 								req.body.channelName[i]
 							]
@@ -347,10 +310,10 @@ function startServer()
 			//close web server
 			server.close();
 
-			console.log("Server Port has changed. Please visit http://" + mixServerIP + ":" + config.server.port + " to continue.");
+			logger.warn(`Server port has changed. Please visit http://${mixServerIP}:${config.server.port} to continue.`);
 
 			//respond with redirection to the new port
-			res.send('<script>document.location.href="http://' + mixServerIP + ':' + config.server.port + '/admin";</script>');
+			res.send(`<script>document.location.href="http://${mixServerIP}:${config.server.port}/admin";</script>`);
 
 			startServer();
 			return;
@@ -378,17 +341,18 @@ function startServer()
 	app.get('/aux', (req, res) => {
 		let auxDetails = [];
 
-		if(cache["/Console/Aux_Outputs/modes"] != undefined)
+		if(cache.has("/Console/Aux_Outputs/modes"))
 		{
-			for(let i=0; i<cache["/Console/Aux_Outputs/modes"].args.length; i++)
+			let auxModes = cache.get("/Console/Aux_Outputs/modes").args;
+			for(let i=0; i<auxModes.length; i++)
 			{
-				if(!cache["/Aux_Outputs/" + (i + 1) + "/Buss_Trim/name"])
+				if(!cache.has(`/Aux_Outputs/${i+1}/Buss_Trim/name`))
 				{
 					continue;
 				}
 
 				let enabled = true;
-				let colour = generateColour(i);
+				let colour = generateColour(auxModes.length, i);
 				let icon = "";
 				if(config.auxilaries && config.auxilaries[i])
 				{
@@ -407,7 +371,7 @@ function startServer()
 				}
 				auxDetails.push({
 					"enabled": enabled,
-					"name": cache["/Aux_Outputs/" + (i + 1) + "/Buss_Trim/name"].args[0],
+					"name": cache.get(`/Aux_Outputs/${i+1}/Buss_Trim/name`).args[0],
 					"colour": colour,
 					"icon": icon
 				});
@@ -420,11 +384,11 @@ function startServer()
 	app.get('/channels', (req, res) => {
 
 		let channelDetails = [];
-		if(cache["/Console/Input_Channels"] != undefined)
+		if(cache.has("/Console/Input_Channels"))
 		{
-			for(let i=0; i<cache["/Console/Input_Channels"].args[0]; i++)
+			for(let i=0; i<cache.get("/Console/Input_Channels").args[0]; i++)
 			{
-				if(!cache["/Input_Channels/" + (i + 1) + "/Channel_Input/name"])
+				if(!cache.has(`/Input_Channels/${i+1}/Channel_Input/name`))
 				{
 					continue;
 				}
@@ -454,7 +418,7 @@ function startServer()
 				}
 				channelDetails.push({
 					"enabled": enabled,
-					"name": cache["/Input_Channels/" + (i + 1) + "/Channel_Input/name"].args[0],
+					"name": cache.get(`/Input_Channels/${i+1}/Channel_Input/name`).args[0],
 					"order": order,
 					"title": title,
 					"icon": icon
@@ -467,7 +431,7 @@ function startServer()
 	//if this is the first time webmixer has been run
 	if(!fs.existsSync("config.json"))
 	{
-		console.log("\n\nWeb Server Ready.\nPlease Visit " + getServerURL() + "/admin in a web browser to set up OSC Web Mixer.");
+		logger.info(`Web Server Ready. Please visit ${url}/admin in a web browser to set up OSC Web Mixer.`);
 		return;
 	}
 }
@@ -477,7 +441,7 @@ function startServer()
  */
 function getServerURL()
 {
-	let url = "http://" + mixServerIP;
+	let url = `http://${mixServerIP}`;
 	if(config.server.port != 80)
 	{
 		url += ":" + config.server.port;
@@ -485,13 +449,9 @@ function getServerURL()
 	return url;
 }
 
-/**
- * Start WebSocket Server
- */
-function startWebSocket()
-{
+function startWebSocketServer() {
 	// Create the web socket server
-	wss = new webSocket.Server({
+	let wss = new webSocket.Server({
 		server: server
 	});
 
@@ -508,10 +468,7 @@ function startWebSocket()
 		//save the new connection
 		connections.push(socket);
 
-		if(config.debug)
-		{
-			console.debug("New Connection");
-		}
+		logger.debug("New websockets connection")
 
 		//send config for new connections
 		socket.send(buildConfig());
@@ -520,22 +477,16 @@ function startWebSocket()
 		socket.on('message', function message(data)
 		{
 			let oscMsg = JSON.parse(data);
-
-			if(config.debug)
-			{
-				console.debug("Message recieved from socket client: " + JSON.stringify(oscMsg));
-			}
+			logger.debug("Message recieved from socket client: " + JSON.stringify(oscMsg));
 
 			//ignore messages that are already cached
-			if(cache[oscMsg.address] != undefined && JSON.stringify(cache[oscMsg.address]) == JSON.stringify(oscMsg))
+			if(cache.has(oscMsg.address) && JSON.stringify(cache.get(oscMsg.address)) == JSON.stringify(oscMsg))
 			{
-				if(config.debug)
-				{
-					console.log("Message already in cache " + JSON.stringify(oscMsg));
-				}
+				logger.debug("Message already in cache " + JSON.stringify(oscMsg));
 				return;
 			}
 
+			
 			oscMsg = processPlugins(oscMsg);
 			if(oscMsg === false)
 			{
@@ -544,9 +495,9 @@ function startWebSocket()
 
 			//respond from cache if a value exists
 			const key = oscMsg.address.slice(0,-2);
-			if(oscMsg.address.substr(-2) == "/?" && cache[key] != undefined)
+			if(oscMsg.address.substr(-2) == "/?" && cache.has(key))
 			{
-				this.send(JSON.stringify(cache[key]));
+				this.send(JSON.stringify(cache.get(key)));
 				return;
 			}
 
@@ -559,11 +510,8 @@ function startWebSocket()
 	//when a websocket error occurs
 	wss.on("error", function (err)
 	{
-		console.debug("wss error", err);
+		logger.error("wss error", err);
 	});
-
-	const url = getServerURL();
-	console.log("\n\nWeb Server Ready.\nVisit " + url + "/admin in a web browser to adjust configuration.\n\nVisit " + url + " in a web browser to access OSC Web Mixer.\nPlease make sure the device you want to use is on the same network.");
 }
 
 /**
@@ -576,10 +524,7 @@ function writeConfig()
 	{
 		throw err;
 	}
-	if(config.debug)
-	{
-		console.log("Config Saved.");
-	}
+	logger.debug("Config Saved.");
 }
 
 /**
@@ -587,7 +532,14 @@ function writeConfig()
  */
 function loadConfig()
 {
-	let _config = {
+	if(fs.existsSync("config.json"))
+	{
+		return JSON.parse(
+			fs.readFileSync("config.json", "utf-8")
+		)
+	}
+	
+	return {
 		debug: false,
 		server: {
 			port: 80
@@ -601,12 +553,6 @@ function loadConfig()
 		},
 		external: []
 	};
-	if(fs.existsSync("config.json"))
-	{
-		_config = fs.readFileSync('config.json', "utf8");
-		_config = JSON.parse(_config);
-	}
-	config = _config;
 }
 
 /**
@@ -623,11 +569,8 @@ function fetchValues()
 	const osc = {address: "/Console/Channels/?", args: []};
 	udpPort.send(osc, config.desk.ip, config.desk.port);
 
-	if(config.debug)
-	{
-		console.log("Requesting channels from Mixing Desk");
-	}
-
+	logger.debug("Requesting channels from Mixing Desk");
+	
 	setTimeout(fetchValues, 3000);
 }
 
@@ -645,7 +588,7 @@ function startOSC()
 	{
 		if(err.code == "EHOSTDOWN" || err.code == "EHOSTUNREACH")
 		{
-			console.log(err.address + " is not responding");
+			logger.error(err.address + " is not responding");
 			return;
 		}
 		console.error("UDP error", err);
@@ -653,15 +596,12 @@ function startOSC()
 
 	udpPort.on("message", function(oscMsg, timeTag, info)
 	{
-		if(config.debug)
-		{
-			console.log("Message received over UDP: " + JSON.stringify(oscMsg));
-		}
+		logger.debug("Message received over UDP: " + JSON.stringify(oscMsg));
 
 		//session has changed. Reload
 		if(oscMsg.address == "/Console/Session/!")
 		{
-			cache = [];
+			cache.clear();
 			loaded = false;
 			closeAllConnections();
 			fetchValues();
@@ -669,12 +609,9 @@ function startOSC()
 		}
 
 		//ignore messages that are already cached
-		if(cache[oscMsg.address] != undefined && JSON.stringify(cache[oscMsg.address]) == JSON.stringify(oscMsg))
+		if(cache.has(oscMsg.address) && JSON.stringify(cache.get(oscMsg.address)) == JSON.stringify(oscMsg))
 		{
-			if(config.debug)
-			{
-				console.log("Message already in cache " + JSON.stringify(oscMsg));
-			}
+			logger.debug("Message already in cache " + JSON.stringify(oscMsg));
 			return;
 		}
 
@@ -696,9 +633,9 @@ function startOSC()
 
 		//respond from cache if a value exists
 		const key = oscMsg.address.slice(0,-2);
-		if(oscMsg.address.substr(-2) == "/?" && cache[key] != undefined)
+		if(oscMsg.address.substr(-2) == "/?" && cache.has(key))
 		{
-			broadcast(cache[key]);
+			broadcast(cache.get(key));
 			return;
 		}
 
@@ -708,7 +645,7 @@ function startOSC()
 	udpPort.on("ready", fetchValues);
 
 	udpPort.open();
-	spinner = ora("Loading values from mixing desk...").start();
+	spinner = logger.loading("Loading values from mixing desk...").start();
 }
 
 /**
@@ -734,7 +671,7 @@ function processSnapshotMsg(oscMsg)
 			return;
 		}
 
-		//request the names for the current snapshots. We will use the resonse to store the snapshot name below.
+		//request the names for the current snapshots. We will use the response to store the snapshot name below.
 		udpPort.send({address: "/Snapshots/names/?", args: []}, config.desk.ip, config.desk.port);
 
 		return;
@@ -794,10 +731,7 @@ function broadcast(oscMsg, source)
 	if(config.desk.ip != source)
 	{
 		udpPort.send(oscMsg, config.desk.ip, config.desk.port);
-		if(config.debug)
-		{
-			console.log("Sent " + JSON.stringify(oscMsg) + " to " + config.desk.ip + ":" + config.desk.port + " (Mixing Desk)");
-		}
+		logger.debug(`Sent ${JSON.stringify(oscMsg)} to Mixing Desk (${config.desk.ip}:${config.desk.port})`);
 	}
 
 	//notify all external devices
@@ -808,10 +742,7 @@ function broadcast(oscMsg, source)
 			if(external.broadcast && (external.loopback || external.ip != source))
 			{
 				udpPort.send(oscMsg, external.ip, external.port);
-				if(config.debug)
-				{
-					console.log("Sent " + JSON.stringify(oscMsg) + " to " + external.ip + ":" + external.port + " (" + external.name + ")");
-				}
+				logger.debug(`Sent ${JSON.stringify(oscMsg)} to External "${external.name}" (${external.ip}:${external.port})`);
 			}
 		}
 	}
@@ -830,10 +761,7 @@ function broadcast(oscMsg, source)
 			if(connection != source)
 			{
 				connection.send(JSON.stringify(oscMsg));
-				if(config.debug)
-				{
-					console.log("Sent " + JSON.stringify(oscMsg) + " to socket " + validConnections.length);
-				}
+				logger.debug(`Sent ${JSON.stringify(oscMsg)} to socket ${validConnections.length}`);
 			}
 		}
 	});
@@ -854,7 +782,7 @@ function stopOSC()
  */
 function maybeCacheResponse(msg)
 {
-	let addresses = [
+	let matchAddresses = [
 		/^\/Console\/Input_Channels$/, //cache total number of channels
 		/^\/Aux_Outputs\/([0-9]+)\/Buss_Trim\/name$/, //cache aux name
 		/^\/Console\/Aux_Outputs\/modes$/, //cache aux modes (stereo or mono)
@@ -863,37 +791,15 @@ function maybeCacheResponse(msg)
 		/^\/Input_Channels\/([0-9]+)\/Aux_Send\/([0-9]+)\/send_pan$/ //cache channel aux pan
 	];
 
-	for(let address of addresses)
+	for(let address of matchAddresses)
 	{
 		if(address.test(msg.address))
 		{
-			cache[msg.address] = msg;
-			if(config.debug)
-			{
-				console.log("Cached " + JSON.stringify(msg));
-			}
+			cache.set(msg.address, msg);
+			logger.debug(`Cached ${JSON.stringify(msg)}`);
 			return;
 		}
 	}
-}
-
-/**
- * Add or update key: value to an object at a position in an array
- * @param {object} objectArray - the object to add to
- * @param {int} position - the position of the object in an array
- * @param {string} key - the key to set
- * @param {int|float|string} value - the value of the key to set
- */
-function addToObject(objectArray, position, key, value)
-{
-	if(objectArray[position] != undefined)
-	{
-		objectArray[position][key] = value;
-		return;
-	}
-	objectArray[position] = {
-		[key]: value
-	};
 }
 
 /**
@@ -902,14 +808,14 @@ function addToObject(objectArray, position, key, value)
  */
 function loadNextRequiredParameter()
 {
-	if(cache["/Console/Input_Channels"] == undefined)
+	if(!cache.has("/Console/Input_Channels"))
 	{
 		//reguest channel count (amoung other things)
 		udpPort.send({address: "/Console/Channels/?", args: []}, config.desk.ip, config.desk.port);
 		return;
 	}
 
-	if(cache["/Console/Aux_Outputs/modes"] == undefined)
+	if(!cache.has("/Console/Aux_Outputs/modes"))
 	{
 		//request aux modes
 		udpPort.send({address: "/Console/Aux_Outputs/modes/?", args: []}, config.desk.ip, config.desk.port);
@@ -917,21 +823,21 @@ function loadNextRequiredParameter()
 	}
 
 	//request aux names
-	for(let i=1; i<=cache["/Console/Aux_Outputs/modes"].args.length; i++)
+	for(let i=1; i<=cache.get("/Console/Aux_Outputs/modes").args.length; i++)
 	{
-		if(cache["/Aux_Outputs/" + i + "/Buss_Trim/name"] == undefined)
+		if(!cache.has(`/Aux_Outputs/${i}/Buss_Trim/name`))
 		{
-			udpPort.send({address: "/Aux_Outputs/" + i + "/Buss_Trim/name/?", args: []}, config.desk.ip, config.desk.port);
+			udpPort.send({address: `/Aux_Outputs/${i}/Buss_Trim/name/?`, args: []}, config.desk.ip, config.desk.port);
 			return;
 		}
 	}
 
 	//request channel names
-	for(let i=1; i<=cache["/Console/Input_Channels"].args[0]; i++)
+	for(let i=1; i<=cache.get("/Console/Input_Channels").args[0]; i++)
 	{
-		if(cache["/Input_Channels/" + i + "/Channel_Input/name"] == undefined)
+		if(!cache.has(`/Input_Channels/${i}/Channel_Input/name`))
 		{
-			udpPort.send({address: "/Input_Channels/" + i + "/Channel_Input/name/?", args: []}, config.desk.ip, config.desk.port);
+			udpPort.send({address: `/Input_Channels/${i}/Channel_Input/name/?`, args: []}, config.desk.ip, config.desk.port);
 			return;
 		}
 	}
@@ -943,39 +849,10 @@ function loadNextRequiredParameter()
 	cachePrimeInterval = setInterval(primeCache, 100);
 
 	loaded = true;
+	spinner.succeed("Loaded values from mixing desk.");
 
-	spinner.succeed("");
-
-	if(!config.auxilaries || !config.channels)
-	{
-		config.auxilaries = [];
-		for(const [index, mode] of cache["/Console/Aux_Outputs/modes"].args.entries())
-		{
-			config.auxilaries.push({
-				enabled: true,
-				colour: generateColour(index),
-				icon: ""
-			});
-		}
-
-		config.channels = [];
-		for(let i=0; i<cache["/Console/Input_Channels"].args[0]; i++)
-		{
-			if(cache["/Input_Channels/" + (i + 1) + "/Channel_Input/name"] != undefined)
-			{
-				config.channels.push({
-					enabled: true,
-					order: i,
-					title: "",
-					icon: ""
-				});
-			}
-		}
-
-		writeConfig();
-	}
-
-	startWebSocket();
+	startWebSocketServer();
+	logger.info("Webmixer ready to use.");
 }
 
 let cachePrimeInterval = null;
@@ -987,10 +864,8 @@ let cachePrimeInterval = null;
  */
 function primeCache()
 {
-	if(config.debug)
-	{
-		console.log("Priming Cache");
-	}
+	logger.debug("Priming Cache");
+
 	//request all aux level and pan values if they have been saved in config
 	if(config.channels && config.auxilaries)
 	{
@@ -1009,15 +884,15 @@ function primeCache()
 				}
 
 				//request level
-				if(cache["/Input_Channels/" + (channel+1) + "/Aux_Send/" + (aux+1) + "/send_level"] == undefined)
+				if(!cache.has(`/Input_Channels/${channel+1}/Aux_Send/${aux+1}/send_level`))
 				{
-					udpPort.send({address: "/Input_Channels/" + (channel+1) + "/Aux_Send/" + (aux+1) + "/send_level/?", args: []}, config.desk.ip, config.desk.port);
+					udpPort.send({address: `/Input_Channels/${channel+1}/Aux_Send/${aux+1}/send_level/?`, args: []}, config.desk.ip, config.desk.port);
 					return;
 				}
 				//request pan
-				if(cache["/Input_Channels/" + (channel+1) + "/Aux_Send/" + (aux+1) + "/send_pan"] == undefined)
+				if(!cache.has(`/Input_Channels/${channel+1}/Aux_Send/${aux+1}/send_pan`))
 				{
-					udpPort.send({address: "/Input_Channels/" + (channel+1) + "/Aux_Send/" + (aux+1) + "/send_pan/?", args: []}, config.desk.ip, config.desk.port);
+					udpPort.send({address: `/Input_Channels/${channel+1}/Aux_Send/${aux+1}/send_pan/?`, args: []}, config.desk.ip, config.desk.port);
 					return;
 				}
 			}
@@ -1026,10 +901,7 @@ function primeCache()
 
 	clearInterval(cachePrimeInterval);
 
-	if(config.debug)
-	{
-		console.log("Cache Primed");
-	}
+	logger.debug("Cache Primed");
 }
 
 /**
@@ -1046,10 +918,7 @@ function sendUDP(name, msg)
 			if(external.name == name)
 			{
 				udpPort.send(msg, external.ip, external.port);
-				if(config.debug)
-				{
-					console.log("Sent " + JSON.stringify(msg) + " to " + external.ip + ":" + external.port + " (" + external.name + ")");
-				}
+					logger.debug(`Sent ${JSON.stringify(msg)} to External "${external.name}" (${external.ip}:${external.port})`);
 			}
 		}
 	}
@@ -1064,7 +933,7 @@ function processPlugins(oscMsg)
 {
 	for(const plugin of plugins)
 	{
-		let response = plugin.handleOSC(oscMsg, {broadcast:broadcast, cache:cache, send: sendUDP});
+		let response = plugin.handleOSC(oscMsg, {broadcast: broadcast, cache: cache, send: sendUDP});
 		if(response === false)
 		{
 			return false;

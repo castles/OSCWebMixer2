@@ -1,13 +1,16 @@
 {
     "name": "OSCWebMixerV2",
     "main": "index.js",
-    "version": "2.0.0",
+    "version": "2.3.0",
     "description": "A server that allows web clients and other external devices to control their own mix for DiGiCo sound desks.",
     "author": "Marc Castles",
     "homepage": "https://launchinteractive.com.au",
     "repository": {
         "type": "git",
         "url": "git://github.com/"
+    },
+    "scripts": {
+        "start": "node index.js"
     },
     "license": "MIT",
     "keywords": [
@@ -18,12 +21,11 @@
         "DiGiCo"
     ],
     "dependencies": {
-        "cli-progress": "^3.11.2",
-        "colortranslator": "^4.1.0",
+        "colortranslator": "^5.0.0",
         "config": "^3.3.9",
-        "express": "^4.19.2",
+        "express": "^4.21.2",
         "ora": "^5.4.1",
         "osc": "github:castles/osc.js",
-        "ws": "8.12.0"
+        "ws": "8.18.3"
     }
 }
