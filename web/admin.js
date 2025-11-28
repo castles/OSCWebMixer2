@@ -181,7 +181,6 @@ configForm.addEventListener("submit", (e) => {
 	{
 		e.preventDefault();
 	}
-	loadConfig();
 });
 
 /**
@@ -489,7 +488,7 @@ function loadConfig()
 			deskIP.value = json.desk.ip == "" ? json.server.ip.replace(/\.\d+$/, "") + "." : json.desk.ip;
 			deskReceivePort.value = deskPort;
 			debug.checked = json.debug == true;
-	
+
 			clearExternals();
 			for(let external of json.external)
 			{
@@ -671,6 +670,7 @@ function onOpen()
 
 	document.body.classList.remove("disconnected");
 
+	loadConfig();
 	fetchAux();
 	fetchChannels();
 }
