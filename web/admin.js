@@ -181,7 +181,6 @@ configForm.addEventListener("submit", (e) => {
 	{
 		e.preventDefault();
 	}
-	loadConfig();
 });
 
 /**
@@ -673,6 +672,7 @@ function onOpen()
 
 	fetchAux();
 	fetchChannels();
+	loadConfig();
 }
 
 /**
