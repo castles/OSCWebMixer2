@@ -64,7 +64,7 @@ class leadvol
 
 				//save the current pan. We use this to restore the panning value when the vocal is removed from the lead group.
 				const panKey = this.panAddress(iemChannel, aux);
-				this.savedValues[panKey] = webmixer.cache[panKey];
+				this.savedValues[panKey] = webmixer.cache.get(panKey);
 
 				//Turn Up
 				this.changeLevel(webmixer, iemChannel, aux, this.SHIFT);
@@ -94,12 +94,12 @@ class leadvol
 	changeLevel(webmixer, channel, aux, amount)
 	{
 		const key = "/Input_Channels/" + channel + "/Aux_Send/" + aux + "/send_level";
-		if(webmixer.cache[key] !== undefined)
+		if(webmixer.cache.has(key))
 		{
 			webmixer.broadcast({
 				address: key,
 				args: [
-					webmixer.cache[key].args[0] + amount
+					webmixer.cache.get(key).args[0] + amount
 				]
 			});
 		}
@@ -122,7 +122,7 @@ class leadvol
 			webmixer.broadcast(msg);
 
 			//set the cache to the broadcasted value
-			webmixer.cache[key] = msg;
+			webmixer.cache.set(key, msg);
 		}
 	}
 
@@ -139,7 +139,7 @@ class leadvol
 		webmixer.broadcast(msg);
 
 		//set the cache to the new value
-		webmixer.cache[msg.address] = msg;
+		webmixer.cache.set(msg.address, msg);
 	}
 
 	panAddress(channel, aux)
