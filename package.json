@@ -11,7 +11,8 @@
     },
     "scripts": {
         "start": "node index.js",
-        "package": "npx pkg . --output \"dist/${npm_package_name}-${npm_package_version}\""
+        "package": "npx pkg . --output \"dist/${npm_package_name}-${npm_package_version}\"",
+        "package-plugins": "zip -r dist/${npm_package_name}-plugins-${npm_package_version}.zip plugins/"
     },
     "license": "MIT",
     "keywords": [
