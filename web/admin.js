@@ -181,7 +181,6 @@ configForm.addEventListener("submit", (e) => {
 	{
 		e.preventDefault();
 	}
-	loadConfig();
 });
 
 /**
@@ -671,8 +670,14 @@ function onOpen()
 
 	document.body.classList.remove("disconnected");
 
+	/*
+	Sockets close and open again when the config is saved. We want to make sure we have the latest when the socket is opened.
+	TODO: This isn't the most elegant solution and it might be better to save & reload the config using the websocket.
+	*/
+	loadConfig();
 	fetchAux();
 	fetchChannels();
+	
 }
 
 /**
