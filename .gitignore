@@ -4,5 +4,6 @@
 .DS_Store
 ._* 
 node_modules*
-package-lock.json
 config.json
+dist/
+tmp/

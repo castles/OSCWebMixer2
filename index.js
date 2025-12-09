@@ -74,24 +74,40 @@ let spinner = null;
 
 const mixServerIP = getMainIPAddress();
 
-let plugins = [];
-const pluginFiles = fs.readdirSync('./plugins')
-for (const plugin of pluginFiles)
-{
-	//ignore files that start with underscore
-	if(plugin.substring(0,1) == "_")
-	{
-		logger.info(`Not loading "${plugin}" plugin.`);
-		continue;
+
+/**
+ * Load all plugins from the ./plugins directory
+ * @returns - Array of plugins (empty if none found/enabled)
+ */
+function loadPlugins() {
+	if (!fs.existsSync('./plugins')) {
+		logger.warn("Directory ./plugins/ not found. Creating empty directory.");
+		fs.mkdirSync('./plugins');
+		logger.info("To use plugins, please add them to the ./plugins/ directory.");
+		return [];
 	}
-	if(plugin.slice(-3) != ".js")
-	{
-		logger.info(`Ignoring "${plugin}" in plugin directory.`);
-		continue;
+
+	let plugins = [];
+	const pluginFiles = fs.readdirSync('./plugins');
+	
+	for (const file of pluginFiles) {
+		if (file.startsWith('_')) {
+			logger.info(`Not loading plugin "${file}".`);
+			continue;
+		}
+		if (!file.endsWith('.js')) {
+			logger.warn(`Ignoring non-JS file "${file}" in plugin directory.`);
+			continue;
+		}
+		let plugin = require('./plugins/' + file);
+		plugins.push(new plugin());
+		logger.info(`Loaded plugin "${file}".`);
 	}
-	let plug = require('./plugins/' + plugin);
-	plugins.push(new plug());
+	
+	return plugins;
 }
+
+const plugins = loadPlugins();
 
 /**
  * Build initial configuration for new connections

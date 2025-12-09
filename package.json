@@ -1,7 +1,7 @@
 {
-    "name": "OSCWebMixerV2",
+    "name": "OSCWebMixerV2", 
     "main": "index.js",
-    "version": "2.3.1",
+    "version": "2.3.2",
     "description": "A server that allows web clients and other external devices to control their own mix for DiGiCo sound desks.",
     "author": "Marc Castles",
     "homepage": "https://launchinteractive.com.au",
@@ -10,7 +10,9 @@
         "url": "git://github.com/"
     },
     "scripts": {
-        "start": "node index.js"
+        "start": "node index.js",
+        "package": "npx pkg . --output \"dist/${npm_package_name}-${npm_package_version}\"",
+        "package-plugins": "zip -r dist/${npm_package_name}-plugins-${npm_package_version}.zip plugins/"
     },
     "license": "MIT",
     "keywords": [
@@ -20,6 +22,9 @@
         "audio",
         "DiGiCo"
     ],
+    "devDependencies": {
+        "@yao-pkg/pkg": "^6.10.1"
+    },
     "dependencies": {
         "colortranslator": "^5.0.0",
         "config": "^3.3.9",
@@ -27,5 +32,24 @@
         "ora": "^5.4.1",
         "osc": "github:castles/osc.js",
         "ws": "8.18.3"
+    },
+    "pkg": {
+        "scripts": [
+            "lib/**/*.js",
+            "index.js"
+        ],
+        "assets": [
+            "web/**/*"
+        ],
+        "targets": [
+            "node22-linux-x64",
+            "node22-macos-x64",
+            "node22-macos-arm64",
+            "node22-win-x64"
+        ],
+        "outputPath": "dist"
+    },
+    "bin": {
+        "oscwebmixer2": "index.js"
     }
 }
