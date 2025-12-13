@@ -1,7 +1,7 @@
 {
     "name": "OSCWebMixerV2", 
     "main": "index.js",
-    "version": "2.4.0",
+    "version": "2.4.1",
     "description": "A server that allows web clients and other external devices to control their own mix for DiGiCo sound desks.",
     "author": "Marc Castles",
     "homepage": "https://launchinteractive.com.au",
@@ -40,6 +40,9 @@
         ],
         "assets": [
             "web/**/*"
+        ],
+        "ignore": [
+            "config.json"
         ],
         "targets": [
             "node22-linux-x64",
