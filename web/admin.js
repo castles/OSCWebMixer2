@@ -190,12 +190,19 @@ configForm.addEventListener("submit", (e) => {
  * @param {boolean} checked - whether or not the field should be checked
  * @param {string} label - the label for the field
  * @param {string} tooltip - optional tooltip for the field
- * @returns
+ * @param {string} labelClass - optional class for the label
+ * @returns {DomElement} - the checkbox field element
  */
-function createCheckboxField(name, checked, label, tooltip = "")
+function createCheckboxField(name, checked, label, tooltip = "", labelClass = "")
 {
 	const checkboxField = document.createElement("input");
 	const checkboxLabel = document.createElement("label");
+
+	if (labelClass != "")
+	{
+		checkboxLabel.className = labelClass;
+	}
+
 	const checkboxText = document.createTextNode(label);
 	const checkboxHiddenField = document.createElement("input");
 
@@ -294,7 +301,7 @@ function createAux(number, enabled, name, colour, icon)
 	channelNumberLabel.innerHTML = String(number).padStart(2, "0");
 	auxWrap.appendChild(channelNumberLabel);
 
-	auxWrap.appendChild(createCheckboxField("auxEnabled[]", enabled, ""));
+	auxWrap.appendChild(createCheckboxField("auxEnabled[]", enabled, "", "", "enabled"));
 
 	let auxNameLabel = document.createElement("label");
 	let auxName = document.createElement("input");
@@ -315,6 +322,45 @@ function createAux(number, enabled, name, colour, icon)
 
 	auxiliaries.appendChild(auxWrap);
 }
+
+function toggleAuxSelection(e)
+{
+	e.preventDefault();
+
+	let checkboxes = auxiliaries.querySelectorAll('label.enabled>input[type="checkbox"]');
+	
+	let allChecked = true;
+	for(let checkbox of checkboxes)
+	{
+		if(!checkbox.checked)
+		{
+			allChecked = false;
+			break;
+		}
+	}
+
+	for(let checkbox of checkboxes)
+	{
+		checkbox.checked = !allChecked;
+		checkbox.dispatchEvent(new Event("change"));
+	}
+}
+
+function invertAuxSelection(e)
+{
+	e.preventDefault();
+
+	let checkboxes = auxiliaries.querySelectorAll('label.enabled>input[type="checkbox"]');
+
+	for(let checkbox of checkboxes)
+	{
+		checkbox.checked = !checkbox.checked;
+		checkbox.dispatchEvent(new Event("change"));
+	}
+}
+
+document.getElementById("toggle-aux-selection").addEventListener("click", toggleAuxSelection);
+document.getElementById("invert-aux-selection").addEventListener("click", invertAuxSelection);
 
 function moveup(e)
 {
@@ -402,7 +448,7 @@ function createChannel(number, enabled, name, order, icon="", title="")
 	//channelWrap.draggable = true;
 	//channelWrap.droppable = true;
 
-	channelWrap.appendChild(createCheckboxField("channelEnabled[]", enabled, ""));
+	channelWrap.appendChild(createCheckboxField("channelEnabled[]", enabled, "", "", "enabled"));
 
 	let channelNameLabel = document.createElement("label");
 	let channelName = document.createElement("input");
@@ -434,7 +480,46 @@ function createChannel(number, enabled, name, order, icon="", title="")
 	//makeDraggable(channelWrap);
 }
 
-let dropTarget = undefined;
+function toggleChannelSelection(e)
+{
+	e.preventDefault();
+
+	let checkboxes = channels.querySelectorAll('label.enabled>input[type="checkbox"]');
+	
+	let allChecked = true;
+	for(let checkbox of checkboxes)
+	{
+		if(!checkbox.checked)
+		{
+			allChecked = false;
+			break;
+		}
+	}
+
+	for(let checkbox of checkboxes)
+	{
+		checkbox.checked = !allChecked;
+		checkbox.dispatchEvent(new Event("change"));
+	}
+}
+
+function invertChannelSelection(e)
+{
+	e.preventDefault();
+
+	let checkboxes = channels.querySelectorAll('label.enabled>input[type="checkbox"]');
+
+	for(let checkbox of checkboxes)
+	{
+		checkbox.checked = !checkbox.checked;
+		checkbox.dispatchEvent(new Event("change"));
+	}
+}
+
+document.getElementById("toggle-channel-selection").addEventListener("click", toggleChannelSelection);
+document.getElementById("invert-channel-selection").addEventListener("click", invertChannelSelection);
+
+/*let dropTarget = undefined;
 let dragged = undefined;
 function makeDraggable(target)
 {
@@ -466,7 +551,7 @@ function makeDraggable(target)
 		dragged = undefined;
 		dropTarget = undefined;
 	});
-}
+}*/
 
 //load current config and populate fields
 function loadConfig()
