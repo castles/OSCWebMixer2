@@ -28,7 +28,7 @@
     "dependencies": {
         "colortranslator": "^5.0.0",
         "config": "^3.3.9",
-        "express": "^4.21.2",
+        "express": "^4.22.1",
         "ora": "^5.4.1",
         "osc": "github:castles/osc.js",
         "ws": "8.18.3"
