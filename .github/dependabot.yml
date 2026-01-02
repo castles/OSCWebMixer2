@@ -1,0 +1,9 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"           # root of your project
+    schedule:
+      interval: "daily"      # check for updates daily
+    ignore:
+      - dependency-name: "osc"
+        versions: ["*"]      # ignore npm registry versions, use your GitHub fork
