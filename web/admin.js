@@ -1,6 +1,6 @@
 "use strict";
 
-const externalDiv = document.getElementById("external"),
+const externalDiv = document.getElementById("externalDevices"),
 ipAddress = document.querySelector("input[name=ip_address]"),
 serverPort = document.querySelector("input[name=server_port]"),
 oscReceivePort = document.querySelector("input[name=osc_port]"),
@@ -552,7 +552,7 @@ function loadConfig()
 			debug.checked = json.debug == true;
 	
 			clearExternals();
-			for(let external of json.external)
+			for(let external of json.externalDevices)
 			{
 				createExternal(external.broadcast, external.name, external.ip, external.loopback, external.port);
 			}
