@@ -160,7 +160,7 @@ function buildConfig()
 					enabled: currentState.channels[i] ? currentState.channels[i].enabled : true,
 					label: cache.get(`/Input_Channels/${i+1}/Channel_Input/name`).args[0],
 					channel: i + 1,
-					order: currentState.channels[i]?.order ?? i,
+					order: currentState.channels[i]?.displayOrder ?? i,
 					title: currentState.channels[i] ? currentState.channels[i].title : "",
 					icon: currentState.channels[i] ? currentState.channels[i].icon : ""
 				});
@@ -245,43 +245,23 @@ function startServer()
 			}
 		}
 
-		if(req.body.auxEnabled && req.body.auxColour && req.body.auxIcon)
-		{
-			let auxConfig = [];
-			for(const [index, value] of req.body.auxEnabled.entries())
-			{
-				addToObject(auxConfig, index, "enabled", value == "true");
-			}
-			for(const [index, value] of req.body.auxColour.entries())
-			{
-				addToObject(auxConfig, index, "colour", value);
-			}
-			for(const [index, value] of req.body.auxIcon.entries())
-			{
-				addToObject(auxConfig, index, "icon", value);
-			}
+		if (req.body.auxEnabled && req.body.auxColour && req.body.auxIcon) {
+			const auxConfig = req.body.auxEnabled.map((enabledValue, index) => ({
+				enabled: enabledValue === "true",
+				colour: req.body.auxColour[index],
+				icon: req.body.auxIcon[index]
+			}));
 			currentState.auxes = auxConfig;
 		}
 
 		if(req.body.channelEnabled && req.body.channelOrder && req.body.channelIcon)
 		{
-			let channelConfig = [];
-			for(const [index, value] of req.body.channelEnabled.entries())
-			{
-				addToObject(channelConfig, index, "enabled", value == "true");
-			}
-			for(const [index, value] of req.body.channelOrder.entries())
-			{
-				addToObject(channelConfig, index, "order", parseInt(value));
-			}
-			for(const [index, value] of req.body.sectionTitle.entries())
-			{
-				addToObject(channelConfig, index, "title", value);
-			}
-			for(const [index, value] of req.body.channelIcon.entries())
-			{
-				addToObject(channelConfig, index, "icon", value);
-			}
+			const channelConfig = req.body.channelEnabled.map((enabledValue, index) => ({
+				enabled: enabledValue === "true",
+				displayOrder: parseInt(req.body.channelOrder[index]) || index,
+				title: req.body.sectionTitle ? req.body.sectionTitle[index] : "",
+				icon: req.body.channelIcon ? req.body.channelIcon[index] : ""
+			}))
 			currentState.channels = channelConfig;
 		}
 
@@ -446,9 +426,9 @@ function startServer()
 					{
 						enabled = currentState.channels[i].enabled;
 					}
-					if(currentState.channels[i].order != undefined)
+					if(currentState.channels[i].displayOrder != undefined)
 					{
-						order = currentState.channels[i].order;
+						order = currentState.channels[i].displayOrder;
 					}
 					if(currentState.channels[i].title != undefined)
 					{
