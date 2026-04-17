@@ -4,6 +4,6 @@
 .DS_Store
 ._* 
 node_modules*
-config.json
-dist/
+/config/
+/dist/
 tmp/
