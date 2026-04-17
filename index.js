@@ -317,7 +317,7 @@ function startServer()
 		}
 
 		//force webmixer client and admin connections to reload
-		closeAllConnections();
+		closeAllWebsocketConnections();
 
 		if(oscPortChanged)
 		{
@@ -327,16 +327,18 @@ function startServer()
 
 		if(portChanged)
 		{
+			closeAllConnections();
+
 			//close web socket server
 			wss.close();
 
 			//close web server
 			server.close();
 
-			logger.warn(`Server port has changed. Please visit http://${getServerURL()} to continue.`);
+			logger.warn(`Server port has changed. Please visit ${getServerURL()} to continue.`);
 
 			//respond with redirection to the new port
-			res.send(`<script>document.location.href="http://${getServerURL()}/admin";</script>`);
+			res.send(`<script>document.location.href="${getServerURL()}/admin";</script>`);
 
 			startServer();
 			return;
@@ -578,7 +580,7 @@ function loadConfig()
 			fs.readFileSync("config.json", "utf-8")
 		)
 	}
-
+	
 	return {
 		debug: false,
 		server: {
@@ -651,7 +653,7 @@ function startOSC()
 		{
 			cache.clear();
 			loaded = false;
-			closeAllConnections();
+			closeAllWebsocketConnections();
 			fetchValues();
 			return;
 		}
@@ -758,7 +760,7 @@ function processSnapshotMsg(oscMsg)
 /**
  * Close all webmixer connections
  */
-function closeAllConnections()
+function closeAllWebsocketConnections()
 {
 	for(let connection of connections)
 	{
