@@ -456,13 +456,7 @@ function startServer()
 		res.json(channelDetails);
 	});
 
-	//if this is the first time webmixer has been run
-	// TODO change to check for global config
-	if(!fs.existsSync("config.json"))
-	{
-		logger.info(`Web Server Ready. Please visit ${getServerURL()}/admin in a web browser to set up OSC Web Mixer.`);
-		return;
-	}
+	logger.info(`Web Server Ready. Please visit ${getServerURL()}/admin in a web browser to configure OSC Web Mixer.`);
 }
 
 /**
