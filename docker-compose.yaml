@@ -5,4 +5,4 @@ services:
     restart: unless-stopped
     network_mode: host
     # volumes:  # If initial config is empty, then program not starting correctly
-    #   - ./config.json:/webmixer/config.json
+    #   - ./config:/webmixer/config
