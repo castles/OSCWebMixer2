@@ -27,9 +27,9 @@
 			<li><a href="#aux">Auxiliaries</a></li>
 			<li><a href="#channels">Channels</a></li>
 			<li><a href="#additional-devices">Additional Devices</a></li>
+			<li><a href="#presets">Presets</a></li>
 		</ul>
 	</nav>
-
 	<div id="mainContent">
 		<form id="configForm" method="post" action="/admin">
 
@@ -84,6 +84,20 @@
 			<section id="additional-devices-content">
 				<div id="externalDevices"></div>
 				<button id="addExternal">+</button>
+			</section>
+
+			<section id="presets-content">
+				<div class="tips">Presets allow you to save and restore your webmixer config (Auxiliaries, Channels).</div>
+					<div class="preset-manager-container">
+						<div class="new-preset-row">
+							<input type="text" id="new-preset-name" placeholder="New preset name...">
+							<div class="button-row">
+								<button id="save-preset">Save</button>
+								<button id="refresh-presets">Refresh</button>
+							</div>
+						</div>
+						<div id="preset-list" class="preset-selection-list"></div>
+					</div>
 			</section>
 
 		</form>

@@ -785,3 +785,126 @@ function startWebsocket()
 startWebsocket();
 
 
+function refreshPresetList() {
+    fetch('/api/presets')
+        .then(res => {
+            if (!res.ok) throw new Error('Network response was not ok');
+            return res.json();
+        })
+        .then(presets => {
+            const listContainer = document.getElementById('preset-list');
+
+            if (!presets || presets.length === 0) {
+                listContainer.innerHTML = '<p class="notice">No presets found</p>';
+                return;
+            }
+
+            listContainer.innerHTML = presets.map(p => {
+                const date = new Date(p.lastChanged);
+                const dateString = date.toLocaleDateString() + ', ' + 
+                                 date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                return `
+                    <div class="preset-item" data-id="${p.uuid}">
+                        <div class="preset-info">
+                            <span class="name">${p.name}</span>
+                            <span class="date">${dateString}</span>
+                        </div>
+                        <div class="preset-actions">
+                            <button type="button" class="btn-load" onclick="loadPreset(event)">Load</button>
+                            <button type="button" class="btn-delete" onclick="deletePreset(event)">Delete</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        })
+        .catch(err => {
+            console.error("Failed to refresh presets:", err);
+        });
+}
+refreshPresetList()
+
+document.getElementById("refresh-presets").addEventListener("click", async (e) => {
+	e.preventDefault()
+	refreshPresetList();
+});
+
+
+async function savePreset() {
+	const nameInput = document.getElementById("new-preset-name");
+	const name = nameInput.value.trim()
+
+	if (!nameInput) {
+		alert("Please enter a name for the preset.");
+		return;
+	}
+
+	try {
+		const response = await fetch('/api/presets/save-current-state', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ name })
+		});
+
+		const data = await response.json();
+
+		if (!response.ok) {
+			throw new Error(data.message || "Something went wrong");
+		}
+
+		// Success Path
+		nameInput.value = '';
+		refreshPresetList();
+		console.log("Success:", data.message);
+
+	} catch (err) {
+		// Catches the 'throw' above OR network/parsing failures
+		alert(err.message);
+		console.error("Save error:", err);
+	}
+}
+
+document.getElementById("save-preset").addEventListener("click", async (e) => {
+	e.preventDefault();
+	await savePreset();
+})
+
+async function loadPreset(event) {
+	event.preventDefault()
+
+	const presetItem = event.target.closest('.preset-item');
+	const uuid = presetItem.getAttribute('data-id');
+	const presetName = presetItem.querySelector('.name').textContent;
+
+	if (confirm(`Load preset "${presetName}"?`)) {
+		const response = await fetch(`/api/presets/${uuid}/load`, { method: 'POST' });
+		if (!response.ok) {
+			const data = await response.json();
+			alert(data.message);
+			return;
+		}
+
+		fetchAux();
+		fetchChannels();
+	}
+}
+
+async function deletePreset(event) {
+	event.preventDefault()
+
+	const presetItem = event.target.closest('.preset-item');
+	const uuid = presetItem.getAttribute('data-id');
+	const presetName = presetItem.querySelector('.name').textContent;
+
+	if (confirm(`Delete preset "${presetName}"?`)) {
+		const response = await fetch(`/api/presets/${uuid}`, { method: 'DELETE' });
+		if (!response.ok) {
+			const data = await response.json();
+			alert(data.message);
+			return;
+		}
+
+		refreshPresetList();
+	}
+}
+
