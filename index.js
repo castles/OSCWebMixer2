@@ -7,7 +7,7 @@ const webSocket = require("ws");
 const fs = require('fs');
 
 const configManager = require("./lib/config/configManager.js")
-const logger = require('./lib/logging/logger.js');		// TODO configure logger to use debug settings from state
+const logger = require('./lib/logging/logger.js');
 const { getMainIPAddress, addToObject, generateColour } = require('./lib/utils/utils.js');
 
 /**
@@ -15,7 +15,10 @@ const { getMainIPAddress, addToObject, generateColour } = require('./lib/utils/u
  */
 configManager.ensureConfigDirectoryExists();
 let config = configManager.getGlobalConfigOrDefault();
-let currentState = configManager.getCurrentStateOrDefault()
+let currentState = configManager.getCurrentStateOrDefault();
+
+// Configure logger to use settings from global config
+logger.configure(config.debug, false);
 
 /**
  * the osc.js UDP Listening Port
@@ -699,7 +702,7 @@ function startOSC()
 }
 
 /**
- * Ha
+ * Handles Current Snapshot messages sent by the console
  * @param {object} oscMsg
  */
 function processSnapshotMsg(oscMsg)
