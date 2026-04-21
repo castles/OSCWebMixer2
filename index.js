@@ -951,12 +951,12 @@ function stopOSC()
 function maybeCacheResponse(msg)
 {
 	let matchAddresses = [
-		/^\/Console\/Input_Channels$/, //cache total number of channels
+		/^\/Input_Channels\/(\d{1,3})\/Aux_Send\/(\d{1,3})\/send_level$/, //cache channel aux level
+		/^\/Input_Channels\/(\d{1,3})\/Aux_Send\/(\d{1,3})\/send_pan$/, //cache channel aux pan
+		/^\/Input_Channels\/(\d{1,3})\/Channel_Input\/name$/, //cache channel name
 		/^\/Aux_Outputs\/([0-9]+)\/Buss_Trim\/name$/, //cache aux name
 		/^\/Console\/Aux_Outputs\/modes$/, //cache aux modes (stereo or mono)
-		/^\/Input_Channels\/([0-9]+)\/Channel_Input\/name$/, //cache channel name
-		/^\/Input_Channels\/([0-9]+)\/Aux_Send\/([0-9]+)\/send_level$/, //cache channel aux level
-		/^\/Input_Channels\/([0-9]+)\/Aux_Send\/([0-9]+)\/send_pan$/ //cache channel aux pan
+		/^\/Console\/Input_Channels$/ //cache total number of channels
 	];
 
 	for(let address of matchAddresses)
