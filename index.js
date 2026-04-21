@@ -225,6 +225,7 @@ function startServer()
 		}
 
 		config.debug = req.body.debug == "debug";
+		logger.setDebug(config.debug);
 
 		config.desk.ip = req.body.desk_ip;
 		config.desk.port = req.body.desk_port;
