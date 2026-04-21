@@ -166,7 +166,7 @@ function buildConfig()
 	}
 
 	return JSON.stringify({
-		"config": {		// TODO name is not changed because frontend depends on it
+		"config": {
 			channels: channels,
 			aux: auxilaries,
 			snapshot: currentSnapshotName
@@ -619,7 +619,14 @@ function startWebSocketServer() {
 			connections = connections.filter(function(c) { return c !== socket; });
 		});
 
-		logger.debug("New websockets connection")
+		//drop it from the list as soon as it closes, rather than waiting for the
+		//next broadcast to prune it
+		socket.on('close', function()
+		{
+			connections = connections.filter(function(c) { return c !== socket; });
+		});
+
+		logger.debug(`New WebSocket client connected. (Total: ${connections.length})`);
 
 		//send config for new connections
 		socket.send(buildConfig());
@@ -637,7 +644,7 @@ function startWebSocketServer() {
 				logger.warn("Ignoring malformed message from socket client: " + data);
 				return;
 			}
-			logger.debug("Message recieved from socket client: " + JSON.stringify(oscMsg));
+			logger.debug("Message recieved from websocket client: " + JSON.stringify(oscMsg));
 
 			//ignore messages that are already cached
 			if(cache.has(oscMsg.address) && JSON.stringify(cache.get(oscMsg.address)) == JSON.stringify(oscMsg))
@@ -664,6 +671,11 @@ function startWebSocketServer() {
 			maybeCacheResponse(oscMsg);
 
 			broadcast(oscMsg, this);
+		});
+
+		socket.on("close", function(code, reason) {
+			connections = connections.filter(conn => conn !== socket);
+			logger.debug(`Websocket client disconnected. (Total: ${connections.length})`);
 		});
 	});
 
