@@ -80,12 +80,6 @@ let server = null;
  */
 let wss = null;
 
-/**
- * Loading Spinner
- * @type {import('ora').Ora}
- */
-let spinner = null;
-
 const mixServerIP = getMainIPAddress();
 
 
@@ -819,7 +813,7 @@ function startOSC()
 	udpPort.on("ready", fetchValues);
 
 	udpPort.open();
-	spinner = logger.loading("Loading values from mixing desk...").start();
+	logger.info("Loading values from mixing desk...");
 }
 
 /**
@@ -1023,7 +1017,7 @@ function loadNextRequiredParameter()
 	cachePrimeInterval = setInterval(primeCache, 100);
 
 	loaded = true;
-	spinner.succeed("Loaded values from mixing desk.");
+	logger.info("Loaded values from mixing desk.");
 
 	startWebSocketServer();
 	logger.info("Webmixer ready to use.");
