@@ -38,6 +38,16 @@ let connections = [];
 let loaded = false;
 
 /**
+ * Healthcheck object for console availability monitoring
+ * @type {Object}
+ */
+let healthcheck = {
+	interval: null,
+	timeout: null,
+	healthy: true
+};
+
+/**
  * Stores OSC messages that have been cached
  * @type {Map}
  */
@@ -748,6 +758,91 @@ function fetchValues()
 }
 
 /**
+ * Start the healthcheck for console availability
+ */
+function startHealthcheck()
+{
+	if(healthcheck.interval)
+	{
+		return;
+	}
+
+	performHealthcheck();
+	healthcheck.interval = setInterval(performHealthcheck, 5000);
+	logger.info("Console healthcheck started (checking every 5 seconds).");
+}
+
+/**
+ * Perform a single healthcheck query
+ */
+function performHealthcheck()
+{
+	if(healthcheck.timeout)
+	{
+		clearTimeout(healthcheck.timeout);
+	}
+
+	udpPort.send({address: "/Console/Name/?", args: []}, config.desk.ip, config.desk.port);
+	logger.debug("Sent healthcheck query to console.");
+
+	healthcheck.timeout = setTimeout(() => {
+		if(healthcheck.healthy)
+		{
+			logger.warn("Console healthcheck failed: No response from console.");
+			healthcheck.healthy = false;
+			loaded = false;
+			closeAllWebsocketConnections();
+
+			// Close the WebSocket server - clients will see connection closed
+            if(wss)
+            {
+                wss.close();
+                wss = null;
+            }
+		}
+	}, 3000);
+}
+
+/**
+ * Stop the healthcheck
+ */
+function stopHealthcheck()
+{
+	if(healthcheck.interval)
+	{
+		clearInterval(healthcheck.interval);
+		healthcheck.interval = null;
+	}
+
+	if(healthcheck.timeout)
+	{
+		clearTimeout(healthcheck.timeout);
+		healthcheck.timeout = null;
+	}
+
+	logger.info("Console healthcheck stopped");
+}
+
+/**
+ * Mark the console as healthy and resume operations if needed
+ */
+function markConsoleHealthy()
+{
+	if(healthcheck.timeout)
+	{
+		clearTimeout(healthcheck.timeout);
+		healthcheck.timeout = null;
+	}
+
+	if(!healthcheck.healthy)
+	{
+		logger.info("Console healthcheck recovered: Console is back online.");
+		healthcheck.healthy = true;
+		loaded = true;
+	}
+}
+
+/**
  * Start listening to OSC messages from the network
  */
 function startOSC()
@@ -779,7 +874,13 @@ function startOSC()
 	{
 		logger.debug("Message received over UDP: " + JSON.stringify(oscMsg));
 
-		//session has changed. Reload
+		// Handle healthcheck response
+		if(oscMsg.address == "/Console/Name")
+		{
+			markConsoleHealthy();
+		}
+
+		// Session has changed. Reload
 		if(oscMsg.address == "/Console/Session/!")
 		{
 			cache.clear();
@@ -954,6 +1055,7 @@ function broadcast(oscMsg, source)
  */
 function stopOSC()
 {
+	stopHealthcheck();
 	udpPort.close();
 }
 
@@ -1029,11 +1131,14 @@ function loadNextRequiredParameter()
 
 	cachePrimeInterval = setInterval(primeCache, 100);
 
+	markConsoleHealthy();
 	loaded = true;
 	logger.info("Loaded values from mixing desk.");
 
 	startWebSocketServer();
 	logger.info("Webmixer ready to use.");
+	
+	startHealthcheck();
 }
 
 let cachePrimeInterval = null;
