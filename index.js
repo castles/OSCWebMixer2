@@ -55,6 +55,19 @@ let currentSnapshot = -1;
 const logger = new Logger(config.debug, false);
 
 /**
+ * Last-resort handlers so an unexpected error is logged instead of silently
+ * killing the server (which would drop every connected device mid-show).
+ */
+process.on('uncaughtException', function(err)
+{
+	logger.error("Uncaught exception: " + (err && err.stack ? err.stack : err));
+});
+process.on('unhandledRejection', function(reason)
+{
+	logger.error("Unhandled promise rejection: " + (reason && reason.stack ? reason.stack : reason));
+});
+
+/**
  * The main http server
  * @type {http.Server}
  */
@@ -89,7 +102,7 @@ function loadPlugins() {
 
 	let plugins = [];
 	const pluginFiles = fs.readdirSync('./plugins');
-	
+
 	for (const file of pluginFiles) {
 		if (file.startsWith('_')) {
 			logger.info(`Not loading plugin "${file}".`);
@@ -103,7 +116,7 @@ function loadPlugins() {
 		plugins.push(new plugin());
 		logger.info(`Loaded plugin "${file}".`);
 	}
-	
+
 	return plugins;
 }
 
@@ -121,6 +134,12 @@ function buildConfig()
 		let auxModes = cache.get("/Console/Aux_Outputs/modes").args;
 		for(const [index, mode] of auxModes.entries())
 		{
+			//skip auxes whose name hasn't arrived from the desk yet (matches the /aux route)
+			if(!cache.has(`/Aux_Outputs/${index+1}/Buss_Trim/name`))
+			{
+				continue;
+			}
+
 			auxilaries.push({
 				enabled: config.auxilaries[index] ? config.auxilaries[index].enabled : true,
 				label: cache.get(`/Aux_Outputs/${index+1}/Buss_Trim/name`).args[0],
@@ -318,8 +337,6 @@ function startServer()
 
 		if(portChanged)
 		{
-			closeAllConnections();
-
 			//close web socket server
 			wss.close();
 
@@ -485,6 +502,13 @@ function startWebSocketServer() {
 		//save the new connection
 		connections.push(socket);
 
+		//drop it from the list as soon as it closes, rather than waiting for the
+		//next broadcast to prune it
+		socket.on('close', function()
+		{
+			connections = connections.filter(function(c) { return c !== socket; });
+		});
+
 		logger.debug("New websockets connection")
 
 		//send config for new connections
@@ -512,7 +536,7 @@ function startWebSocketServer() {
 				return;
 			}
 
-			
+
 			oscMsg = processPlugins(oscMsg);
 			if(oscMsg === false)
 			{
@@ -536,7 +560,7 @@ function startWebSocketServer() {
 	//when a websocket error occurs
 	wss.on("error", function (err)
 	{
-		logger.error("wss error", err);
+		logger.error("wss error: " + (err && err.stack ? err.stack : err));
 	});
 }
 
@@ -564,7 +588,7 @@ function loadConfig()
 			fs.readFileSync("config.json", "utf-8")
 		)
 	}
-	
+
 	return {
 		debug: false,
 		server: {
@@ -596,7 +620,7 @@ function fetchValues()
 	udpPort.send(osc, config.desk.ip, config.desk.port);
 
 	logger.debug("Requesting channels from Mixing Desk");
-	
+
 	setTimeout(fetchValues, 3000);
 }
 
@@ -617,7 +641,7 @@ function startOSC()
 			logger.error(err.address + " is not responding");
 			return;
 		}
-		console.error("UDP error", err);
+		logger.error("UDP error: " + (err && err.stack ? err.stack : err));
 	});
 
 	udpPort.on("message", function(oscMsg, timeTag, info)
