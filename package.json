@@ -23,14 +23,15 @@
         "DiGiCo"
     ],
     "devDependencies": {
-        "@yao-pkg/pkg": "^6.10.1"
+        "@yao-pkg/pkg": "^6.12.0"
     },
     "dependencies": {
         "colortranslator": "^5.0.0",
+        "config": "^4.2.0",
         "express": "^4.22.1",
-        "ora": "^5.4.1",
+        "ora": "^9.0.0",
         "osc": "github:castles/osc.js",
-        "ws": "8.18.3"
+        "ws": "8.19.0"
     },
     "pkg": {
         "scripts": [
