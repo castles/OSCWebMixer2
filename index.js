@@ -466,8 +466,9 @@ function getServerURL()
 }
 
 function startWebSocketServer() {
-	// Create the web socket server
-	let wss = new webSocket.Server({
+	// Create the web socket server (assigns the module-level `wss` so it can be
+	// closed later when the server port changes)
+	wss = new webSocket.Server({
 		server: server
 	});
 
@@ -492,7 +493,16 @@ function startWebSocketServer() {
 		//when a message has been sent from a webmixer user
 		socket.on('message', function message(data)
 		{
-			let oscMsg = JSON.parse(data);
+			let oscMsg;
+			try
+			{
+				oscMsg = JSON.parse(data);
+			}
+			catch(e)
+			{
+				logger.warn("Ignoring malformed message from socket client: " + data);
+				return;
+			}
 			logger.debug("Message recieved from socket client: " + JSON.stringify(oscMsg));
 
 			//ignore messages that are already cached

@@ -100,7 +100,15 @@ function requestValues()
  */
 function onMessage(e)
 {
-	let json = JSON.parse(e.data);
+	let json;
+	try
+	{
+		json = JSON.parse(e.data);
+	}
+	catch(err)
+	{
+		return;
+	}
 
 	//console.log(json);
 
