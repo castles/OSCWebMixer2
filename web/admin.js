@@ -323,45 +323,6 @@ function createAux(number, enabled, name, colour, icon)
 	auxiliaries.appendChild(auxWrap);
 }
 
-function toggleAuxSelection(e)
-{
-	e.preventDefault();
-
-	let checkboxes = auxiliaries.querySelectorAll('label.enabled>input[type="checkbox"]');
-	
-	let allChecked = true;
-	for(let checkbox of checkboxes)
-	{
-		if(!checkbox.checked)
-		{
-			allChecked = false;
-			break;
-		}
-	}
-
-	for(let checkbox of checkboxes)
-	{
-		checkbox.checked = !allChecked;
-		checkbox.dispatchEvent(new Event("change"));
-	}
-}
-
-function invertAuxSelection(e)
-{
-	e.preventDefault();
-
-	let checkboxes = auxiliaries.querySelectorAll('label.enabled>input[type="checkbox"]');
-
-	for(let checkbox of checkboxes)
-	{
-		checkbox.checked = !checkbox.checked;
-		checkbox.dispatchEvent(new Event("change"));
-	}
-}
-
-document.getElementById("toggle-aux-selection").addEventListener("click", toggleAuxSelection);
-document.getElementById("invert-aux-selection").addEventListener("click", invertAuxSelection);
-
 function moveup(e)
 {
 	e.preventDefault();
@@ -480,21 +441,29 @@ function createChannel(number, enabled, name, order, icon="", title="")
 	//makeDraggable(channelWrap);
 }
 
-function toggleChannelSelection(e)
+/**
+ * Find the enable checkboxes for the list a selection button belongs to. Each
+ * pair of buttons sits in a .button-row inside the same <section> as the list
+ * it controls.
+ * @param {DomElement} button - the clicked selection button
+ * @returns {NodeListOf<HTMLInputElement>}
+ */
+function selectionCheckboxes(button)
+{
+	return button.closest("section").querySelectorAll('label.enabled > input[type="checkbox"]');
+}
+
+/**
+ * Toggle a list's enable checkboxes: if every box is already checked, uncheck
+ * them all, otherwise check them all.
+ * @param {MouseEvent} e
+ */
+function toggleSelection(e)
 {
 	e.preventDefault();
 
-	let checkboxes = channels.querySelectorAll('label.enabled>input[type="checkbox"]');
-	
-	let allChecked = true;
-	for(let checkbox of checkboxes)
-	{
-		if(!checkbox.checked)
-		{
-			allChecked = false;
-			break;
-		}
-	}
+	let checkboxes = selectionCheckboxes(this);
+	let allChecked = [...checkboxes].every((checkbox) => checkbox.checked);
 
 	for(let checkbox of checkboxes)
 	{
@@ -503,21 +472,29 @@ function toggleChannelSelection(e)
 	}
 }
 
-function invertChannelSelection(e)
+/**
+ * Flip every enable checkbox in a list.
+ * @param {MouseEvent} e
+ */
+function invertSelection(e)
 {
 	e.preventDefault();
 
-	let checkboxes = channels.querySelectorAll('label.enabled>input[type="checkbox"]');
-
-	for(let checkbox of checkboxes)
+	for(let checkbox of selectionCheckboxes(this))
 	{
 		checkbox.checked = !checkbox.checked;
 		checkbox.dispatchEvent(new Event("change"));
 	}
 }
 
-document.getElementById("toggle-channel-selection").addEventListener("click", toggleChannelSelection);
-document.getElementById("invert-channel-selection").addEventListener("click", invertChannelSelection);
+for(let button of document.querySelectorAll(".toggle-selection"))
+{
+	button.addEventListener("click", toggleSelection);
+}
+for(let button of document.querySelectorAll(".invert-selection"))
+{
+	button.addEventListener("click", invertSelection);
+}
 
 /*let dropTarget = undefined;
 let dragged = undefined;
