@@ -23,7 +23,7 @@
         "DiGiCo"
     ],
     "devDependencies": {
-        "@yao-pkg/pkg": "^6.10.1"
+        "@yao-pkg/pkg": "^6.12.0"
     },
     "dependencies": {
         "colortranslator": "^5.0.0",
