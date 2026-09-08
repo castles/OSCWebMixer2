@@ -7,3 +7,5 @@ updates:
     ignore:
       - dependency-name: "osc"
         versions: ["*"]      # ignore npm registry versions, use your GitHub fork
+      - dependency-name: "ora"
+        update-types: ["version-update:semver-major"]  # ora >=6 is ESM-only; this project is CommonJS

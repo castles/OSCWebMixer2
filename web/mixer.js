@@ -160,7 +160,7 @@ function onMessage(e)
 	{
 		for(let slider of document.querySelectorAll('input[data-channel="' + channelNameMatch[1] + '"]'))
 		{
-			slider.previousElementSibling.innerHTML = json.args[0];
+			slider.previousElementSibling.textContent = json.args[0];
 		}
 	}
 
@@ -173,10 +173,10 @@ function onMessage(e)
 		{
 			if(option.value == auxNameMatch[1])
 			{
-				option.innerHTML = json.args[0];
+				option.textContent = json.args[0];
 
 				//make sure the aux span is correct
-				auxSelect.previousElementSibling.innerHTML = auxSelect.getElementsByTagName("option")[auxSelect.selectedIndex].text;
+				auxSelect.previousElementSibling.textContent = auxSelect.getElementsByTagName("option")[auxSelect.selectedIndex].text;
 			}
 		}
 
@@ -215,9 +215,8 @@ function buildAux(options)
     	return;
 	}
 
-	let selectHTML = "";
-
 	auxiliaries.innerHTML = "";
+	auxSelect.innerHTML = "";
 
 	for(let option of options)
 	{
@@ -233,7 +232,15 @@ function buildAux(options)
 		let iconsrc = option.icon ? option.icon : "";
 
 		let colour = formatColour(option.colour);
-		selectHTML += '<option value="' + option.channel + '" data-channel="' + option.channel + '" data-colour="' + colour + '" data-stereo="' + option.stereo + '" data-icon="' + iconsrc + '">' + option.label + '</option>';
+
+		let opt = document.createElement("option");
+		opt.value = option.channel;
+		opt.dataset.channel = option.channel;
+		opt.dataset.colour = colour;
+		opt.dataset.stereo = option.stereo;
+		opt.dataset.icon = iconsrc;
+		opt.textContent = option.label;
+		auxSelect.appendChild(opt);
 
 		let button = document.createElement("button");
 		button.value = option.channel;
@@ -252,7 +259,6 @@ function buildAux(options)
 
 		auxiliaries.appendChild(button);
 	}
-	auxSelect.innerHTML = selectHTML;
 
 	if(localStorage.getItem("aux"))
 	{
@@ -332,30 +338,59 @@ function resetSlider(e)
  */
 function buildChannels(channels)
 {
-	let html = "";
+	channelsDiv.innerHTML = "";
+
 	for(let channel of channels)
 	{
 		if(channel.title != "")
 		{
-			html += '<h2 style="order:' + channel.order + '">' + channel.title + '</h2>';
+			let heading = document.createElement("h2");
+			heading.style.order = channel.order;
+			heading.textContent = channel.title;
+			channelsDiv.appendChild(heading);
 		}
-		html += '<div' + (channel.enabled ? '' : ' class="disabled"') + ' style="order:' + channel.order + '">';
-		html += '<label class="volume">';
-		if(channel.icon != "")
-		{
-			html += '<img src="' + channel.icon + '" width="22" height="22" class="icon" />';
-		}
-		html += '<span>' + channel.label + '</span><input type="range" data-channel="' + channel.channel + '" class="volumeInput" step="0.001" min="0" max="1" value="0" /></label>';
-		html += '<label class="pan">';
-		if(channel.icon != "")
-		{
-			html += '<img src="' + channel.icon + '" width="22" height="22" class="icon" />';
-		}
-		html += '<span>' + channel.label + '</span><input type="range" data-channel="' + channel.channel + '" class="panInput" step="0.001" min="0" max="1" value="0.5" /></label>';
-		html += '</div>';
-	}
 
-	channelsDiv.innerHTML = html;
+		let wrap = document.createElement("div");
+		if(!channel.enabled)
+		{
+			wrap.className = "disabled";
+		}
+		wrap.style.order = channel.order;
+
+		for(let type of ["volume", "pan"])
+		{
+			let label = document.createElement("label");
+			label.className = type;
+
+			if(channel.icon != "")
+			{
+				let icon = document.createElement("img");
+				icon.src = channel.icon;
+				icon.width = 22;
+				icon.height = 22;
+				icon.className = "icon";
+				label.appendChild(icon);
+			}
+
+			let name = document.createElement("span");
+			name.textContent = channel.label;
+			label.appendChild(name);
+
+			let input = document.createElement("input");
+			input.type = "range";
+			input.dataset.channel = channel.channel;
+			input.className = type == "volume" ? "volumeInput" : "panInput";
+			input.step = "0.001";
+			input.min = "0";
+			input.max = "1";
+			input.value = type == "volume" ? "0" : "0.5";
+			label.appendChild(input);
+
+			wrap.appendChild(label);
+		}
+
+		channelsDiv.appendChild(wrap);
+	}
 
 	for(let slider of document.querySelectorAll(".volumeInput, .panInput"))
 	{
@@ -442,7 +477,7 @@ document.addEventListener("DOMContentLoaded", function()
 		document.body.style.setProperty('--tint', colour);
 
 		//set the current aux text
-		this.previousElementSibling.innerHTML = option.text;
+		this.previousElementSibling.textContent = option.text;
 
 		this.previousElementSibling.previousElementSibling.src = option.dataset.icon;
 
