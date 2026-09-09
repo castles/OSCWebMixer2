@@ -23,11 +23,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Check web/mixer.min.js is up to date
+      - name: Check minified assets are up to date
         run: |
           npm run build
-          git diff --exit-code -- web/mixer.min.js \
-            || (echo "::error::web/mixer.min.js is stale - run 'npm run build' and commit the result" && exit 1)
+          git diff --exit-code -- web/mixer.min.js web/mixer.min.css \
+            || (echo "::error::web/mixer.min.* is stale - run 'npm run build' and commit the result" && exit 1)
 
       - name: Build executables
         run: npm run package
