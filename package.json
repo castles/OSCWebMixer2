@@ -33,7 +33,7 @@
         "express": "^4.22.1",
         "ora": "^5.4.1",
         "osc": "github:castles/osc.js",
-        "ws": "8.19.0"
+        "ws": "8.21.3"
     },
     "pkg": {
         "scripts": [
