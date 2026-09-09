@@ -190,12 +190,19 @@ configForm.addEventListener("submit", (e) => {
  * @param {boolean} checked - whether or not the field should be checked
  * @param {string} label - the label for the field
  * @param {string} tooltip - optional tooltip for the field
- * @returns
+ * @param {string} labelClass - optional class for the label
+ * @returns {DomElement} - the checkbox field element
  */
-function createCheckboxField(name, checked, label, tooltip = "")
+function createCheckboxField(name, checked, label, tooltip = "", labelClass = "")
 {
 	const checkboxField = document.createElement("input");
 	const checkboxLabel = document.createElement("label");
+
+	if (labelClass != "")
+	{
+		checkboxLabel.className = labelClass;
+	}
+
 	const checkboxText = document.createTextNode(label);
 	const checkboxHiddenField = document.createElement("input");
 
@@ -294,7 +301,7 @@ function createAux(number, enabled, name, colour, icon)
 	channelNumberLabel.innerHTML = String(number).padStart(2, "0");
 	auxWrap.appendChild(channelNumberLabel);
 
-	auxWrap.appendChild(createCheckboxField("auxEnabled[]", enabled, ""));
+	auxWrap.appendChild(createCheckboxField("auxEnabled[]", enabled, "", "", "enabled"));
 
 	let auxNameLabel = document.createElement("label");
 	let auxName = document.createElement("input");
@@ -402,7 +409,7 @@ function createChannel(number, enabled, name, order, icon="", title="")
 	//channelWrap.draggable = true;
 	//channelWrap.droppable = true;
 
-	channelWrap.appendChild(createCheckboxField("channelEnabled[]", enabled, ""));
+	channelWrap.appendChild(createCheckboxField("channelEnabled[]", enabled, "", "", "enabled"));
 
 	let channelNameLabel = document.createElement("label");
 	let channelName = document.createElement("input");
@@ -434,7 +441,62 @@ function createChannel(number, enabled, name, order, icon="", title="")
 	//makeDraggable(channelWrap);
 }
 
-let dropTarget = undefined;
+/**
+ * Find the enable checkboxes for the list a selection button belongs to. Each
+ * pair of buttons sits in a .button-row inside the same <section> as the list
+ * it controls.
+ * @param {DomElement} button - the clicked selection button
+ * @returns {NodeListOf<HTMLInputElement>}
+ */
+function selectionCheckboxes(button)
+{
+	return button.closest("section").querySelectorAll('label.enabled > input[type="checkbox"]');
+}
+
+/**
+ * Toggle a list's enable checkboxes: if every box is already checked, uncheck
+ * them all, otherwise check them all.
+ * @param {MouseEvent} e
+ */
+function toggleSelection(e)
+{
+	e.preventDefault();
+
+	let checkboxes = selectionCheckboxes(this);
+	let allChecked = [...checkboxes].every((checkbox) => checkbox.checked);
+
+	for(let checkbox of checkboxes)
+	{
+		checkbox.checked = !allChecked;
+		checkbox.dispatchEvent(new Event("change"));
+	}
+}
+
+/**
+ * Flip every enable checkbox in a list.
+ * @param {MouseEvent} e
+ */
+function invertSelection(e)
+{
+	e.preventDefault();
+
+	for(let checkbox of selectionCheckboxes(this))
+	{
+		checkbox.checked = !checkbox.checked;
+		checkbox.dispatchEvent(new Event("change"));
+	}
+}
+
+for(let button of document.querySelectorAll(".toggle-selection"))
+{
+	button.addEventListener("click", toggleSelection);
+}
+for(let button of document.querySelectorAll(".invert-selection"))
+{
+	button.addEventListener("click", invertSelection);
+}
+
+/*let dropTarget = undefined;
 let dragged = undefined;
 function makeDraggable(target)
 {
@@ -466,7 +528,7 @@ function makeDraggable(target)
 		dragged = undefined;
 		dropTarget = undefined;
 	});
-}
+}*/
 
 //load current config and populate fields
 function loadConfig()

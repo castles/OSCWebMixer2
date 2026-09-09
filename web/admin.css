@@ -125,6 +125,13 @@ button
 	color: #333;
 }
 
+.button-row
+{
+	display: flex;
+	gap: 10px;
+	margin-bottom: 20px;
+}
+
 #external
 {
 	border: 1px solid #eee;
