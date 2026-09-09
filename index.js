@@ -8,7 +8,7 @@ const fs = require('fs');
 
 const configManager = require("./lib/config/configManager.js")
 const logger = require('./lib/logging/logger.js');
-const { getMainIPAddress, addToObject, generateColour } = require('./lib/utils/utils.js');
+const { getMainIPAddress, generateColour } = require('./lib/utils/utils.js');
 
 /**
  * Stores global configuration for webmixer
@@ -328,7 +328,7 @@ function startServer()
 
 		if(portChanged)
 		{
-			closeAllConnections();
+			closeAllWebsocketConnections();
 
 			//close web socket server
 			wss.close();
@@ -767,7 +767,7 @@ function startOSC()
 		if(err.code == "EADDRINUSE" || err.code == "EACCES")
 		{
 			//can't receive OSC without this port - retrying is pointless, so fail loudly
-			if(spinner) spinner.fail("Could not open OSC port.");
+			logger.error("Could not open OSC port.");
 			logger.error(`OSC port ${config.osc.port} is ${err.code == "EACCES" ? "not permitted" : "already in use"}. ` +
 				`Close whatever is using it or change the OSC Receive Port in the admin area.`);
 			process.exit(1);
@@ -1123,7 +1123,7 @@ function processPlugins(oscMsg)
 		{
 			oscMsg = response;
 		}
-	};
+	}
 	return oscMsg;
 }
 
