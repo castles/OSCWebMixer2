@@ -112,9 +112,18 @@ function loadPlugins() {
 			logger.warn(`Ignoring non-JS file "${file}" in plugin directory.`);
 			continue;
 		}
-		let plugin = require('./plugins/' + file);
-		plugins.push(new plugin());
-		logger.info(`Loaded plugin "${file}".`);
+		try
+		{
+			let plugin = require('./plugins/' + file);
+			let instance = new plugin();
+			instance._filename = file;
+			plugins.push(instance);
+			logger.info(`Loaded plugin "${file}".`);
+		}
+		catch(e)
+		{
+			logger.error(`Failed to load plugin "${file}": ${e && e.stack ? e.stack : e}`);
+		}
 	}
 
 	return plugins;
@@ -212,25 +221,44 @@ function startServer()
 	//when a post request occurs in the admin area
 	app.post('/admin', (req, res) => {
 
+		//validate before touching config - a bad value here is persisted to
+		//config.json and then breaks the next startup
+		const isPort = (v) => /^\d+$/.test(String(v).trim()) && +v >= 1 && +v <= 65535;
+		let invalid = [];
+		if(!isPort(req.body.server_port)) invalid.push("Webserver Port");
+		if(!isPort(req.body.osc_port)) invalid.push("OSC Receive Port");
+		if(!isPort(req.body.desk_port)) invalid.push("Mixing Desk Receive Port");
+		if(!req.body.desk_ip || !String(req.body.desk_ip).trim()) invalid.push("Mixing Desk IP Address");
+		if(req.body.externalReceive)
+		{
+			let ports = [].concat(req.body.externalReceive);
+			if(ports.some((p) => !isPort(p))) invalid.push("an Additional Device Receive Port");
+		}
+		if(invalid.length)
+		{
+			res.status(400).send(`Invalid or missing: ${invalid.join(", ")}. Nothing was saved. <a href="/admin">Go back</a>.`);
+			return;
+		}
+
 		//update config with new values
 		let portChanged = false;
 		if(config.server.port != req.body.server_port)
 		{
 			portChanged = true;
-			config.server.port = req.body.server_port;
+			config.server.port = parseInt(req.body.server_port, 10);
 		}
 
 		let oscPortChanged = false;
 		if(config.osc.port != req.body.osc_port)
 		{
 			oscPortChanged = true;
-			config.osc.port = req.body.osc_port;
+			config.osc.port = parseInt(req.body.osc_port, 10);
 		}
 
 		config.debug = req.body.debug == "debug";
 
 		config.desk.ip = req.body.desk_ip;
-		config.desk.port = req.body.desk_port;
+		config.desk.port = parseInt(req.body.desk_port, 10);
 
 		config.external = [];
 		if(req.body.externalName)
@@ -241,7 +269,7 @@ function startServer()
 					broadcast: req.body.externalBroadcast[x] == "true",
 					name: req.body.externalName[x],
 					ip: req.body.externalIP[x],
-					port: req.body.externalReceive[x],
+					port: parseInt(req.body.externalReceive[x], 10),
 					loopback: req.body.externalLoopback[x] == "true"
 				});
 			}
@@ -541,7 +569,7 @@ function startWebSocketServer() {
 				logger.warn("Ignoring malformed message from socket client: " + data);
 				return;
 			}
-			logger.debug("Message recieved from socket client: " + JSON.stringify(oscMsg));
+			logger.debug("Message received from socket client: " + JSON.stringify(oscMsg));
 
 			//ignore messages that are already cached
 			if(cache.has(oscMsg.address) && JSON.stringify(cache.get(oscMsg.address)) == JSON.stringify(oscMsg))
@@ -721,7 +749,8 @@ function startOSC()
 }
 
 /**
- * Ha
+ * Track snapshot number / name changes from the desk and push the current
+ * snapshot name out to the connected clients.
  * @param {object} oscMsg
  */
 function processSnapshotMsg(oscMsg)
@@ -876,13 +905,13 @@ function maybeCacheResponse(msg)
 
 /**
  * Request the required parameters from the desk in order.
- * This gets called every time a mesage arrives until all the required parameters have loaded.
+ * This gets called every time a message arrives until all the required parameters have loaded.
  */
 function loadNextRequiredParameter()
 {
 	if(!cache.has("/Console/Input_Channels"))
 	{
-		//reguest channel count (amoung other things)
+		//request channel count (among other things)
 		udpPort.send({address: "/Console/Channels/?", args: []}, config.desk.ip, config.desk.port);
 		return;
 	}
@@ -1005,7 +1034,17 @@ function processPlugins(oscMsg)
 {
 	for(const plugin of plugins)
 	{
-		let response = plugin.handleOSC(oscMsg, {broadcast: broadcast, cache: cache, send: sendUDP});
+		let response;
+		try
+		{
+			response = plugin.handleOSC(oscMsg, {broadcast: broadcast, cache: cache, send: sendUDP});
+		}
+		catch(e)
+		{
+			//a broken plugin shouldn't take down the OSC pipeline for everyone else
+			logger.error(`Plugin "${plugin._filename || plugin.constructor.name}" threw handling ${oscMsg.address}: ${e && e.stack ? e.stack : e}`);
+			continue;
+		}
 		if(response === false)
 		{
 			return false;

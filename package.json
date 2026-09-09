@@ -7,7 +7,7 @@
     "homepage": "https://launchinteractive.com.au",
     "repository": {
         "type": "git",
-        "url": "git://github.com/"
+        "url": "git+https://github.com/castles/OSCWebMixer2.git"
     },
     "scripts": {
         "start": "node index.js",

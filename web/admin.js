@@ -278,12 +278,12 @@ function addIconPicker(element, name, icon)
 }
 
 /**
- * Create an Auxilary
+ * Create an Auxiliary
  * @param {int} number - the aux number
- * @param {boolean} enabled - wether or not the auxilary is enabled
- * @param {string} name - the name of the auxilary
- * @param {string} colour - the colour of the auxilary
- * @param {string} icon - the icon for the auxilary
+ * @param {boolean} enabled - whether or not the auxiliary is enabled
+ * @param {string} name - the name of the auxiliary
+ * @param {string} colour - the colour of the auxiliary
+ * @param {string} icon - the icon for the auxiliary
  */
 function createAux(number, enabled, name, colour, icon)
 {
@@ -548,7 +548,7 @@ fetchChannels();
 
 /**
  * Make sure the order of node elements are valid.
- * This is only necessary if the order gets out of wack. It should only get messed up if the channel list grows or shrinks.
+ * This is only necessary if the order gets out of whack. It should only get messed up if the channel list grows or shrinks.
  * @param {DOMElement} nodes - the dom nodes to check
  * @param {string} hiddenName - the name for hidden field that stores the order value
  */

@@ -67,7 +67,7 @@ function sliderChange(e)
 		parameter = "pan";
 	}
 
-	sendOSC("/Input_Channels/" + this.dataset.channel + "/Aux_Send/" + auxSelect.options[auxSelect.selectedIndex].dataset.channel + "/send_" + parameter, [sliderValue]);
+	queueOSC("/Input_Channels/" + this.dataset.channel + "/Aux_Send/" + auxSelect.options[auxSelect.selectedIndex].dataset.channel + "/send_" + parameter, [sliderValue]);
 }
 
 function sendOSC(address, args = [])
@@ -80,6 +80,40 @@ function sendOSC(address, args = [])
 		"address": address,
 		"args": args
 	}));
+}
+
+/**
+ * Coalesce fader/pan changes: dragging a slider fires "input" many times a
+ * second, which would flood the desk. Send at most one message per address per
+ * OSC_THROTTLE_MS, always including the final value once movement stops.
+ */
+const OSC_THROTTLE_MS = 50;
+let oscQueue = new Map();
+let oscFlushTimer = null;
+
+function queueOSC(address, args)
+{
+	oscQueue.set(address, args);
+	if(oscFlushTimer === null)
+	{
+		oscFlushTimer = setInterval(flushOSC, OSC_THROTTLE_MS);
+		flushOSC();
+	}
+}
+
+function flushOSC()
+{
+	if(oscQueue.size === 0)
+	{
+		clearInterval(oscFlushTimer);
+		oscFlushTimer = null;
+		return;
+	}
+	for(let [address, args] of oscQueue)
+	{
+		sendOSC(address, args);
+	}
+	oscQueue.clear();
 }
 
 /**
