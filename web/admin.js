@@ -173,13 +173,29 @@ function ipAddressCheck(e)
 deskIP.addEventListener("input", ipAddressCheck);
 
 /**
- * Prevent form submitting when there is custom validity.
+ * Submit the form via fetch instead of a real page navigation, so the
+ * currently selected tab isn't lost when the server re-sends admin.html.
  */
-configForm.addEventListener("submit", (e) => {
+configForm.addEventListener("submit", async (e) => {
+
+	e.preventDefault();
 
 	if(!configForm.checkValidity())
 	{
-		e.preventDefault();
+		return;
+	}
+
+	const response = await fetch(configForm.action, {
+		method: "POST",
+		body: new URLSearchParams(new FormData(configForm))
+	});
+
+	//if the server port changed, it sends a redirect script since it's now listening on a different port
+	const text = await response.text();
+	const redirect = text.match(/document\.location\.href="([^"]+)"/);
+	if(redirect)
+	{
+		document.location.href = redirect[1];
 	}
 });
 
