@@ -330,8 +330,11 @@ function startServer()
 		{
 			closeAllWebsocketConnections();
 
-			//close web socket server
-			wss.close();
+			//close web socket server if it is running
+			if(wss)
+			{
+				wss.close();
+			}
 
 			//close web server
 			server.close();
@@ -596,7 +599,7 @@ function getServerURL()
 
 function startWebSocketServer() {
 	// Create the web socket server
-	let wss = new webSocket.Server({
+	wss = new webSocket.Server({
 		server: server
 	});
 
