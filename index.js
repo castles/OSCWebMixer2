@@ -5,6 +5,7 @@ const express = require("express");
 const http = require('http');
 const webSocket = require("ws");
 const fs = require('fs');
+const crypto = require('crypto');
 
 const Logger = require('./lib/logger.js');
 const { getMainIPAddress, addToObject, generateColour } = require('./lib/utils.js');
@@ -209,8 +210,35 @@ function startServer()
 	});
 	server.listen(config.server.port);
 
+	// Require authentication before allowing any administrative operation
+	function requireAdminAuth(req, res, next)
+	{
+		const expectedPass = process.env.ADMIN_PASSWORD;
+		const expectedUser = process.env.ADMIN_USER || "admin";
+		const header = req.headers.authorization || "";
+		const [scheme, encoded] = header.split(" ");
+		let user = "", pass = "";
+		if(scheme === "Basic" && encoded)
+		{
+			const decoded = Buffer.from(encoded, "base64").toString("utf-8");
+			const sep = decoded.indexOf(":");
+			user = decoded.slice(0, sep);
+			pass = decoded.slice(sep + 1);
+		}
+		const userBuf = Buffer.from(user), passBuf = Buffer.from(pass);
+		const expUserBuf = Buffer.from(expectedUser), expPassBuf = Buffer.from(expectedPass || "");
+		const userOk = userBuf.length === expUserBuf.length && crypto.timingSafeEqual(userBuf, expUserBuf);
+		const passOk = !!expectedPass && passBuf.length === expPassBuf.length && crypto.timingSafeEqual(passBuf, expPassBuf);
+		if(!userOk || !passOk)
+		{
+			res.set("WWW-Authenticate", "Basic realm=\"Admin\"");
+			return res.status(401).send("Unauthorized");
+		}
+		next();
+	}
+
 	//when a post request occurs in the admin area
-	app.post('/admin', (req, res) => {
+	app.post('/admin', requireAdminAuth, (req, res) => {
 
 		//update config with new values
 		let portChanged = false;
