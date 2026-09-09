@@ -11,7 +11,10 @@
     },
     "scripts": {
         "start": "node index.js",
-        "build": "terser web/mixer.js --compress --mangle --output web/mixer.min.js",
+        "mock-desk": "node tools/mock-desk.js",
+        "build:js": "esbuild web/mixer.js --minify --outfile=web/mixer.min.js",
+        "build:css": "esbuild web/mixer.css --minify --outfile=web/mixer.min.css",
+        "build": "npm run build:js && npm run build:css",
         "prepackage": "npm run build",
         "package": "npx pkg . --output \"dist/${npm_package_name}-${npm_package_version}\"",
         "package-plugins": "zip -r dist/${npm_package_name}-plugins-${npm_package_version}.zip plugins/"
@@ -26,7 +29,7 @@
     ],
     "devDependencies": {
         "@yao-pkg/pkg": "^6.22.0",
-        "terser": "5.51.2"
+        "esbuild": "0.25.10"
     },
     "dependencies": {
         "colortranslator": "^6.1.1",

@@ -48,6 +48,34 @@ This project has taken considerable time to create. If you find it useful and wo
 
 <img width="538" height="529" alt="webmixer-external-control" src="https://github.com/user-attachments/assets/c8c01ec9-e153-4555-a19f-ef87dcff3ee5" />
 
+## Developing / Debugging Without a Console
+
+`tools/mock-desk.js` is a fake DiGiCo console. It answers the OSC queries webmixer
+sends while loading, so the server reaches its "ready" state and the whole system
+- web mixer, plugins, external device routing - can be exercised on a workbench
+with no hardware. It also prints every message the server sends, so you can see
+exactly what the web mixer is doing.
+
+1. In one shell, start the mock desk:
+
+```bash
+npm run mock-desk
+```
+
+2. In another shell, start webmixer as usual (`npm run start`).
+3. In the admin area, set the **Mixing Desk IP Address** to the machine running
+   the mock (`127.0.0.1` if it is the same box) and save.
+
+Options:
+
+```bash
+node tools/mock-desk.js --channels 32 --auxes 8   # bigger desk
+node tools/mock-desk.js --live                     # also push periodic snapshot changes
+node tools/mock-desk.js --port 9000 --reply-port 8000 --host 127.0.0.1
+```
+
+With no flags it reads the port numbers from `config.json` when present.
+
 ## Basic Setup Instructions For Docker
 
 1. Install Git and Docker

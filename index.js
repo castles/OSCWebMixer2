@@ -196,7 +196,18 @@ function startServer()
 	}));
 
 	// Create the web server
-	server = http.createServer(app).listen(config.server.port);
+	server = http.createServer(app);
+	server.on("error", function(err)
+	{
+		if(err.code == "EADDRINUSE" || err.code == "EACCES")
+		{
+			logger.error(`Web server port ${config.server.port} is ${err.code == "EACCES" ? "not permitted (ports below 1024 need elevated privileges)" : "already in use"}. ` +
+				`Close whatever is using it or change the Webserver Port in the admin area.`);
+			process.exit(1);
+		}
+		logger.error("Web server error: " + (err && err.stack ? err.stack : err));
+	});
+	server.listen(config.server.port);
 
 	//when a post request occurs in the admin area
 	app.post('/admin', (req, res) => {
@@ -640,6 +651,14 @@ function startOSC()
 		{
 			logger.error(err.address + " is not responding");
 			return;
+		}
+		if(err.code == "EADDRINUSE" || err.code == "EACCES")
+		{
+			//can't receive OSC without this port - retrying is pointless, so fail loudly
+			if(spinner) spinner.fail("Could not open OSC port.");
+			logger.error(`OSC port ${config.osc.port} is ${err.code == "EACCES" ? "not permitted" : "already in use"}. ` +
+				`Close whatever is using it or change the OSC Receive Port in the admin area.`);
+			process.exit(1);
 		}
 		logger.error("UDP error: " + (err && err.stack ? err.stack : err));
 	});
