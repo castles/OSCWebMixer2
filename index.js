@@ -478,6 +478,9 @@ function startServer()
 		logger.info(`Web Server Ready. Please visit ${getServerURL()}/admin in a web browser to set up OSC Web Mixer.`);
 		return;
 	}
+
+	logger.info(`Web mixer:  ${getServerURL()}`);
+	logger.info(`Admin area: ${getServerURL()}/admin`);
 }
 
 /**
@@ -485,7 +488,7 @@ function startServer()
  */
 function getServerURL()
 {
-	let url = `http://${mixServerIP}`;
+	let url = `http://${mixServerIP || "localhost"}`;
 	if(config.server.port != 80)
 	{
 		url += ":" + config.server.port;
