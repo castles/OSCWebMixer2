@@ -94,7 +94,9 @@ S31) console. The S-Series speaks a different OSC dialect from the SD / Quantum
 "DiGiCo iPad" connection the server currently uses (`/channel/{ch}/send/{send}/level`
 instead of `/Input_Channels/{ch}/Aux_Send/{aux}/send_level`, `/console/resend`
 instead of per-value queries, dB send levels, etc.), so it is a workbench target for
-building S-Series support - see [issue #4](https://github.com/castles/OSCWebMixer2/issues/4).
+building S-Series support - see [issue #4](https://github.com/castles/OSCWebMixer2/issues/4)
+and [`lib/desk/README.md`](lib/desk/README.md) for the adapter layer that translates
+between the two dialects.
 It is modelled on the S21 OSC command list posted in that issue and the v1
 [S-mapping](https://github.com/castles/OSCWebMixer/blob/main/mapping/S-mapping.mjs);
 anything it does not know for certain is marked `UNVERIFIED` in the source.

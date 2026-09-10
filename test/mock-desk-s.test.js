@@ -9,58 +9,40 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { spawn } = require("node:child_process");
-const path = require("node:path");
 const osc = require("osc");
 
-const MOCK = path.join(__dirname, "..", "tools", "mock-desk-s.js");
+const { createMockSDesk } = require("../tools/mock-desk-s.js");
+
+let nextPort = 9700;
 
 /**
- * Start the mock on the given ports and give the caller a tiny OSC client that
- * collects every message the mock sends back.
+ * Start the mock in-process on a fresh port and give the caller a tiny OSC client
+ * that collects every message the mock sends back.
  */
-async function startMock(extraArgs = [])
+async function startMock(opts = {})
 {
-	const deskPort = 9600 + Math.floor(Math.random() * 200);
-	const replyPort = deskPort + 1;
+	const port = nextPort++;
+	const replyPort = nextPort++;
 
-	const proc = spawn(process.execPath, [
-		MOCK,
-		"--port", String(deskPort),
-		"--reply-port", String(replyPort),
-		"--host", "127.0.0.1",
-		"--channels", "4",
-		"--auxes", "3",
-		...extraArgs
-	], { stdio: ["ignore", "pipe", "pipe"] });
+	const desk = createMockSDesk({
+		port, replyPort, host: "127.0.0.1", channels: 4, auxes: 3, log: () => {}, ...opts
+	});
 
 	const received = [];
 	const client = new osc.UDPPort({ localAddress: "127.0.0.1", localPort: replyPort, metadata: false });
 	client.on("message", (m) => received.push(m));
 
-	await new Promise((resolve, reject) => {
-		client.on("ready", resolve);
-		client.on("error", reject);
-		client.open();
-	});
+	await Promise.all([
+		desk.whenReady,
+		new Promise((resolve, reject) => { client.on("ready", resolve); client.on("error", reject); client.open(); })
+	]);
 
-	// wait for the mock's socket to be listening
-	await new Promise((resolve) => {
-		proc.stdout.on("data", (d) => {
-			if(d.toString().includes("listening on")) resolve();
-		});
-		setTimeout(resolve, 1500);
-	});
-
-	const send = (address, args = []) => client.send({ address, args }, "127.0.0.1", deskPort);
-	const settle = (ms = 250) => new Promise((r) => setTimeout(r, ms));
-
-	const stop = () => {
-		client.close();
-		proc.kill("SIGKILL");
+	return {
+		received,
+		send: (address, args = []) => client.send({ address, args }, "127.0.0.1", port),
+		settle: (ms = 150) => new Promise((r) => setTimeout(r, ms)),
+		stop: () => { client.close(); desk.close(); }
 	};
-
-	return { send, settle, received, stop };
 }
 
 test("responds to /console/ping with /console/pong", async () => {
@@ -74,30 +56,38 @@ test("responds to /console/ping with /console/pong", async () => {
 	finally { mock.stop(); }
 });
 
+test("proactively sends /console/ping (like a real desk checking we're alive)", async () => {
+	const mock = await startMock();
+	try
+	{
+		mock.send("/console/resend");   // any packet tells the mock where we are
+		await mock.settle(300);
+		assert.ok(mock.received.some((m) => m.address === "/console/ping"));
+	}
+	finally { mock.stop(); }
+});
+
 test("/console/resend dumps channel counts, names and sends", async () => {
 	const mock = await startMock();
 	try
 	{
 		mock.send("/console/resend");
-		await mock.settle(500);
+		await mock.settle(300);
 
 		const byAddress = (re) => mock.received.filter((m) => re.test(m.address));
 
-		const counts = mock.received.find((m) => m.address === "/console/channel/counts");
-		assert.equal(counts.args[0], 4);
+		assert.equal(mock.received.find((m) => m.address === "/console/channel/counts").args[0], 4);
 
 		// 4 input channel names + 3 aux (channel) names
 		assert.equal(byAddress(/^\/channel\/\d+\/name$/).length, 7);
-
-		// aux channels are numbered from 70
-		assert.ok(mock.received.some((m) => m.address === "/channel/70/name"));
+		assert.ok(mock.received.some((m) => m.address === "/channel/70/name")); // aux channels from 70
 
 		// every channel -> every send has a level and an enabled flag
 		assert.equal(byAddress(/^\/channel\/\d+\/send\/\d+\/level$/).length, 12);
 		assert.equal(byAddress(/^\/channel\/\d+\/send\/\d+\/enabled$/).length, 12);
 
 		// only the one stereo aux (send 3) reports pan
-		const pans = byAddress(/^\/channel\/\d+\/send\/(\d+)\/pan$/);
+		const pans = byAddress(/^\/channel\/\d+\/send\/\d+\/pan$/);
 		assert.equal(pans.length, 4);
 		assert.ok(pans.every((m) => m.address.endsWith("/send/3/pan")));
 
@@ -118,20 +108,18 @@ test("echoes send level / pan changes back", async () => {
 		mock.send("/channel/2/send/3/pan", [0.4]);
 		await mock.settle();
 
-		const level = mock.received.find((m) => m.address === "/channel/2/send/1/level");
-		const pan = mock.received.find((m) => m.address === "/channel/2/send/3/pan");
-		assert.equal(level.args[0], -6.5);
-		assert.ok(Math.abs(pan.args[0] - 0.4) < 1e-6);
+		assert.equal(mock.received.find((m) => m.address === "/channel/2/send/1/level").args[0], -6.5);
+		assert.ok(Math.abs(mock.received.find((m) => m.address === "/channel/2/send/3/pan").args[0] - 0.4) < 1e-6);
 	}
 	finally { mock.stop(); }
 });
 
-test("--missing-high-sends withholds initial values for sends > 15", async () => {
-	const mock = await startMock(["--channels", "2", "--auxes", "18", "--missing-high-sends"]);
+test("missingHighSends withholds initial values for sends > 15", async () => {
+	const mock = await startMock({ channels: 2, auxes: 18, missingHighSends: true });
 	try
 	{
 		mock.send("/console/resend");
-		await mock.settle(500);
+		await mock.settle(300);
 
 		const sendNumbers = new Set(
 			mock.received
