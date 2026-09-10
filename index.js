@@ -1253,8 +1253,32 @@ function finishLoading()
 	loaded = true;
 	logger.info("Loaded values from mixing desk.");
 
+	warnAboutAuxChannelCollisions();
+
 	startWebSocketServer();
 	logger.info("Webmixer ready to use.");
+}
+
+/**
+ * On an S-Series, an aux master channel that is also an input channel number
+ * steals that input channel's name (so the channel disappears from the mixer and
+ * the aux gets the wrong name). S-Series aux masters are normally high numbers.
+ */
+function warnAboutAuxChannelCollisions()
+{
+	if(deskConn.type != "S" || !config.desk.auxes || !cache.has("/Console/Input_Channels"))
+	{
+		return;
+	}
+	const channelCount = cache.get("/Console/Input_Channels").args[0];
+	config.desk.auxes.forEach(function(aux, i)
+	{
+		if(aux.channel >= 1 && aux.channel <= channelCount)
+		{
+			logger.warn(`S-Series aux routing: aux ${i + 1} master channel ${aux.channel} is also input channel ${aux.channel}. ` +
+				`That input channel will be hidden and the aux will get its name. Aux masters are usually high channel numbers.`);
+		}
+	});
 }
 
 /**

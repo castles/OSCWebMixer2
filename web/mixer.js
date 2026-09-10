@@ -91,14 +91,16 @@ function sendOSC(address, args = [])
 }
 
 /**
- * Request current AUX values from server
+ * Request current AUX values from server for every channel that is shown
+ * (identified by its real channel number, not its position).
  */
 function requestValues()
 {
-	for(let i=1; i<=[...document.getElementsByClassName("volumeInput")].length; i++)
+	const aux = auxSelect.options[auxSelect.selectedIndex].value;
+	for(let slider of document.getElementsByClassName("volumeInput"))
 	{
-		sendOSC("/Input_Channels/" + i + "/Aux_Send/" + auxSelect.options[auxSelect.selectedIndex].value + "/send_level/?");
-		sendOSC("/Input_Channels/" + i + "/Aux_Send/" + auxSelect.options[auxSelect.selectedIndex].value + "/send_pan/?");
+		sendOSC("/Input_Channels/" + slider.dataset.channel + "/Aux_Send/" + aux + "/send_level/?");
+		sendOSC("/Input_Channels/" + slider.dataset.channel + "/Aux_Send/" + aux + "/send_pan/?");
 	}
 }
 
@@ -142,8 +144,9 @@ function onMessage(e)
 
 		if(sendLevel[2] == auxSelect.options[auxSelect.selectedIndex].dataset.channel)
 		{
-			//-90 to +10
-			let slider = channelInputs[sendLevel[1] - 1];
+			//-90 to +10 - look the slider up by its channel number, not its
+			//position (channels are not always a contiguous 1..N)
+			let slider = channelsDiv.querySelector('.volumeInput[data-channel="' + sendLevel[1] + '"]');
 			if(slider && !activeSliders.has(slider))
 			{
 				slider.value = dbToSlider(parseFloat(json.args[0]));
@@ -159,7 +162,7 @@ function onMessage(e)
 		//0 to +1
 		if(sendPan[2] == auxSelect.options[auxSelect.selectedIndex].dataset.channel)
 		{
-			let slider = panInputs[sendPan[1] - 1];
+			let slider = channelsDiv.querySelector('.panInput[data-channel="' + sendPan[1] + '"]');
 			if(slider && !activeSliders.has(slider))
 			{
 				slider.value = json.args[0];
