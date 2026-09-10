@@ -87,6 +87,25 @@ node tools/mock-desk.js --port 9000 --reply-port 8000 --host 127.0.0.1
 
 With no flags it reads the port numbers from `config.json` when present.
 
+### Mock S-Series console
+
+`tools/mock-desk-s.js` (`npm run mock-desk-s`) is a fake **DiGiCo S-Series** (S21 /
+S31) console. The S-Series speaks a different OSC dialect from the SD / Quantum
+"DiGiCo iPad" connection the server currently uses (`/channel/{ch}/send/{send}/level`
+instead of `/Input_Channels/{ch}/Aux_Send/{aux}/send_level`, `/console/resend`
+instead of per-value queries, dB send levels, etc.), so it is a workbench target for
+building S-Series support - see [issue #4](https://github.com/castles/OSCWebMixer2/issues/4).
+It is modelled on the S21 OSC command list posted in that issue and the v1
+[S-mapping](https://github.com/castles/OSCWebMixer/blob/main/mapping/S-mapping.mjs);
+anything it does not know for certain is marked `UNVERIFIED` in the source.
+
+```bash
+node tools/mock-desk-s.js --channels 32 --auxes 8
+node tools/mock-desk-s.js --missing-high-sends   # reproduce the known
+                                                 # "sends > 15 never load" firmware bug
+node tools/mock-desk-s.js --live                 # nudge faders / fire snapshots
+```
+
 ## Basic Setup Instructions For Docker
 
 1. Install Git and Docker
