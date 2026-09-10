@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const { createSAdapter } = require("../../lib/desk/sAdapter.js");
-const { createDeskAdapter, eventToCommand } = require("../../lib/desk/deskAdapter.js");
+const { createDeskAdapter, eventToCommand, validateSAuxRouting } = require("../../lib/desk/deskAdapter.js");
 
 // aux 1 -> channel 70 / send 1 / stereo
 // aux 2 -> channel 71 / send 2 / mono
@@ -124,6 +124,40 @@ test("round trip: an S send command parses back to the same neutral value", () =
 			assert.ok(Math.abs(event.pan - 0.2) < 1e-9);
 		}
 	}
+});
+
+test("validateSAuxRouting catches duplicate send buses and channels", () => {
+	assert.deepEqual(validateSAuxRouting(AUXES), []);   // the good config from above
+
+	assert.deepEqual(
+		validateSAuxRouting([
+			{ channel: 70, send: 3 },
+			{ channel: 71, send: 2 },
+			{ channel: 72, send: 3 }   // send bus 3 again
+		]),
+		["Aux 3 and aux 1 both use send bus 3."]
+	);
+
+	assert.deepEqual(
+		validateSAuxRouting([
+			{ channel: 70, send: 1 },
+			{ channel: 70, send: 2 }   // channel 70 again
+		]),
+		["Aux 2 and aux 1 both use channel 70."]
+	);
+
+	assert.deepEqual(
+		validateSAuxRouting([{ channel: 70 }]),
+		["Aux 1 has no send bus number."]
+	);
+});
+
+test("the S adapter exposes routing problems as configWarnings", () => {
+	const bad = createSAdapter({ auxes: [{ channel: 70, send: 1 }, { channel: 71, send: 1 }] });
+	assert.equal(bad.configWarnings.length, 1);
+	assert.match(bad.configWarnings[0], /both use send bus 1/);
+
+	assert.deepEqual(createSAdapter({ auxes: AUXES }).configWarnings, []);
 });
 
 test("eventToCommand turns a value event into the command that sets it", () => {

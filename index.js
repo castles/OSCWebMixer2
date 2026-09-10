@@ -10,6 +10,7 @@ const logger = require('./lib/logging/logger.js');
 const { getMainIPAddress, generateColour } = require('./lib/utils/utils.js');
 const { createAdminAuthMiddleware } = require('./lib/adminAuth.js');
 const { createDeskConnection } = require('./lib/desk/deskConnection.js');
+const { validateSAuxRouting } = require('./lib/desk/deskAdapter.js');
 
 /**
  * Stores global configuration for webmixer
@@ -271,6 +272,14 @@ function startServer()
 					});
 				}
 			}
+
+			const problems = validateSAuxRouting(sAuxes);
+			if(problems.length)
+			{
+				res.status(400).send(`S-Series aux routing is invalid, nothing was saved:<ul><li>${problems.join("</li><li>")}</li></ul><a href="/admin#global">Go back</a>.`);
+				return;
+			}
+
 			if(JSON.stringify(sAuxes) != JSON.stringify(config.desk.auxes || []))
 			{
 				deskChanged = true;
@@ -909,6 +918,10 @@ function startDeskConnection()
 	{
 		logger.warn("S-Series console selected but no aux routing is configured, so no auxiliaries will load. " +
 			"Add them on the admin Global Settings tab (or set desk.auxes in config/global.json).");
+	}
+	for(const warning of deskConn.configWarnings)
+	{
+		logger.warn(`S-Series aux routing: ${warning} Faders may appear to move on their own until this is fixed.`);
 	}
 }
 

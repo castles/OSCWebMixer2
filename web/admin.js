@@ -192,6 +192,9 @@ function createSAuxRow(channel = "", send = "", stereo = false)
 	sendLabel.appendChild(sendInput);
 	row.appendChild(sendLabel);
 
+	channelInput.addEventListener("input", validateSAuxRows);
+	sendInput.addEventListener("input", validateSAuxRows);
+
 	row.appendChild(createCheckboxField("sAuxStereo[]", stereo, "Stereo"));
 
 	const deleteButton = document.createElement("button");
@@ -212,6 +215,37 @@ function renumberSAuxRows()
 	[...sAuxRows.children].forEach((row, i) => {
 		row.querySelector(".listNumber").textContent = String(i + 1).padStart(2, "0");
 	});
+	validateSAuxRows();
+}
+
+/**
+ * Flag duplicate channel / send bus numbers - two auxes sharing a send bus are
+ * indistinguishable in incoming messages, which makes faders appear to move on
+ * their own.
+ */
+function validateSAuxRows()
+{
+	if(!sAuxRows)
+	{
+		return;
+	}
+	for(const field of ["sAuxChannel[]", "sAuxSend[]"])
+	{
+		const inputs = [...sAuxRows.querySelectorAll(`input[name="${field}"]`)];
+		const counts = {};
+		for(const input of inputs)
+		{
+			if(input.value !== "")
+			{
+				counts[input.value] = (counts[input.value] || 0) + 1;
+			}
+		}
+		for(const input of inputs)
+		{
+			const dup = input.value !== "" && counts[input.value] > 1;
+			input.setCustomValidity(dup ? "This number is used by more than one aux." : "");
+		}
+	}
 }
 
 if(deskTypeSelect)
@@ -672,6 +706,7 @@ function loadConfig()
 					createSAuxRow(aux.channel, aux.send, aux.stereo);
 				}
 				updateSAuxRoutingVisibility();
+				validateSAuxRows();
 			}
 
 			debug.checked = json.debug == true;
