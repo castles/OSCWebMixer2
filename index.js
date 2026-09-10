@@ -715,10 +715,10 @@ function startWebSocketServer() {
 				logger.warn("Ignoring malformed message from socket client: " + data);
 				return;
 			}
-			logger.debug("Message recieved from websocket client: " + JSON.stringify(oscMsg));
+			logger.debug("Message received from websocket client: " + JSON.stringify(oscMsg));
 
 			//ignore messages that are already cached
-			if(cache.has(oscMsg.address) && JSON.stringify(cache.get(oscMsg.address)) == JSON.stringify(oscMsg))
+			if(isAlreadyCached(oscMsg))
 			{
 				logger.debug("Message already in cache " + JSON.stringify(oscMsg));
 				return;
@@ -799,6 +799,38 @@ function loadConfig()
 }
 
 /**
+ * True if an incoming OSC message is (approximately) the value we already have
+ * cached for that address. OSC floats are only 32-bit, so a value we sent to the
+ * desk comes back with slightly less precision - an exact compare would treat
+ * that echo as a new change and bounce it back to the client that is dragging
+ * the fader, causing a feedback fight.
+ * @param {object} oscMsg
+ * @returns {boolean}
+ */
+function isAlreadyCached(oscMsg)
+{
+	if(!cache.has(oscMsg.address))
+	{
+		return false;
+	}
+	const cached = cache.get(oscMsg.address);
+	const a = cached.args || [];
+	const b = oscMsg.args || [];
+	if(a.length != b.length)
+	{
+		return false;
+	}
+	return a.every(function(value, i)
+	{
+		if(typeof value == "number" && typeof b[i] == "number")
+		{
+			return Math.abs(value - b[i]) < 1e-4;
+		}
+		return value === b[i];
+	});
+}
+
+/**
  * Handle a message from the console. The desk connection has already translated
  * it into the SD-shaped internal representation, so this is dialect-independent.
  * @param {object} oscMsg
@@ -816,8 +848,9 @@ function handleDeskMessage(oscMsg, sourceIp)
 		return;
 	}
 
-	//ignore messages that are already cached
-	if(cache.has(oscMsg.address) && JSON.stringify(cache.get(oscMsg.address)) == JSON.stringify(oscMsg))
+	//ignore messages that are already cached (including an echo of a value we
+	//just sent, which comes back with reduced float precision)
+	if(isAlreadyCached(oscMsg))
 	{
 		logger.debug("Message already in cache " + JSON.stringify(oscMsg));
 		return;

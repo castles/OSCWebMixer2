@@ -14,6 +14,14 @@ channelInputs = null,
 panInputs = null;
 
 /**
+ * Sliders the user is currently dragging. Incoming values from the desk (which
+ * includes an echo of what we just sent) are not applied to these, so the fader
+ * doesn't fight the finger.
+ * @type {Set<HTMLInputElement>}
+ */
+const activeSliders = new Set();
+
+/**
  * Calculate the db value from the provided slider value.
  * @param {number} value - the value to calculate from.
  * - Should be between 0 and 1.
@@ -136,8 +144,11 @@ function onMessage(e)
 		{
 			//-90 to +10
 			let slider = channelInputs[sendLevel[1] - 1];
-			slider.value = dbToSlider(parseFloat(json.args[0]));
-			slider.parentNode.style.setProperty('--value', (slider.value * 100) + "%");
+			if(slider && !activeSliders.has(slider))
+			{
+				slider.value = dbToSlider(parseFloat(json.args[0]));
+				slider.parentNode.style.setProperty('--value', (slider.value * 100) + "%");
+			}
 		}
 	}
 
@@ -149,8 +160,11 @@ function onMessage(e)
 		if(sendPan[2] == auxSelect.options[auxSelect.selectedIndex].dataset.channel)
 		{
 			let slider = panInputs[sendPan[1] - 1];
-			slider.value = json.args[0];
-			slider.parentNode.style.setProperty('--value', (slider.value * 100) + "%");
+			if(slider && !activeSliders.has(slider))
+			{
+				slider.value = json.args[0];
+				slider.parentNode.style.setProperty('--value', (slider.value * 100) + "%");
+			}
 		}
 	}
 
@@ -397,6 +411,11 @@ function buildChannels(channels)
 		slider.addEventListener("input", sliderChange);
 		slider.addEventListener('touchstart', tapSlider);
 		slider.addEventListener('dblclick', resetSlider);
+
+		//track which sliders are being dragged so incoming desk values (and the
+		//echo of what we just sent) don't fight the finger
+		slider.addEventListener('pointerdown', () => activeSliders.add(slider));
+		slider.addEventListener('blur', () => activeSliders.delete(slider));
 	}
 
 	channelInputs = [...document.getElementsByClassName("volumeInput")];
@@ -451,6 +470,10 @@ function startWebsocket()
 }
 
 
+
+//a drag can end with the pointer released anywhere, so clear the active set globally
+document.addEventListener("pointerup", () => activeSliders.clear());
+document.addEventListener("pointercancel", () => activeSliders.clear());
 
 /**
  * When page has loaded
