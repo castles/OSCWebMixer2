@@ -173,16 +173,17 @@ function ipAddressCheck(e)
 deskIP.addEventListener("input", ipAddressCheck);
 
 /**
- * Submit the form via fetch instead of a real page navigation, so the
+ * Submit the config form via fetch instead of a real page navigation, so the
  * currently selected tab isn't lost when the server re-sends admin.html.
+ * @returns {Promise<boolean>} true if the settings were saved, false if the
+ * form was invalid or the page is redirecting to a new port.
  */
-configForm.addEventListener("submit", async (e) => {
-
-	e.preventDefault();
-
+async function submitConfigForm()
+{
 	if(!configForm.checkValidity())
 	{
-		return;
+		configForm.reportValidity();
+		return false;
 	}
 
 	const response = await fetch(configForm.action, {
@@ -196,7 +197,15 @@ configForm.addEventListener("submit", async (e) => {
 	if(redirect)
 	{
 		document.location.href = redirect[1];
+		return false;
 	}
+
+	return true;
+}
+
+configForm.addEventListener("submit", async (e) => {
+	e.preventDefault();
+	await submitConfigForm();
 });
 
 /**
@@ -850,12 +859,18 @@ async function savePreset() {
 	const nameInput = document.getElementById("new-preset-name");
 	const name = nameInput.value.trim()
 
-	if (!nameInput) {
+	if (!name) {
 		alert("Please enter a name for the preset.");
 		return;
 	}
 
 	try {
+		// persist the current settings first so the preset captures the latest
+		// edits, not just whatever was last saved
+		if (!(await submitConfigForm())) {
+			return;
+		}
+
 		const response = await fetch('/api/presets/save-current-state', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
