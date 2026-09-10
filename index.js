@@ -8,6 +8,7 @@ const fs = require('fs');
 
 const Logger = require('./lib/logger.js');
 const { getMainIPAddress, addToObject, generateColour } = require('./lib/utils.js');
+const { createAdminAuthMiddleware } = require('./lib/adminAuth.js');
 
 /**
  * Stores global configuration for webmixer
@@ -209,8 +210,12 @@ function startServer()
 	});
 	server.listen(config.server.port);
 
+	// Protects the admin area. Unauthenticated by default (matches the trusted-LAN
+	// deployment model); set ADMIN_USER/ADMIN_PASSWORD to require Basic Auth instead.
+	const requireAdminAuth = createAdminAuthMiddleware();
+
 	//when a post request occurs in the admin area
-	app.post('/admin', (req, res) => {
+	app.post('/admin', requireAdminAuth, (req, res) => {
 
 		//update config with new values
 		let portChanged = false;
@@ -367,7 +372,7 @@ function startServer()
 	});
 
 	//when a get request occurs in the admin area
-	app.get('/admin', (req, res) => {
+	app.get('/admin', requireAdminAuth, (req, res) => {
 		res.sendFile(__dirname + "/web/admin.html");
 	});
 

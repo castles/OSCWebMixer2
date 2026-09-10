@@ -38,6 +38,17 @@ This project has taken considerable time to create. If you find it useful and wo
 * [GIT](https://git-scm.com/downloads/win) will need to be installed for Windows. [Node](https://nodejs.org/en/download/) must be installed. On macOS you can install node with [Homebrew](https://brew.sh/) (`brew install node`)
 * Server, Desk and other devices must all be on the same network
 
+## Admin Authentication (optional)
+
+The admin area (used to configure the server and mixing desk) is unauthenticated by default,
+matching the trusted-LAN model above. If the server may be reachable from a network you don't
+fully trust, set the following environment variables before starting the server to require HTTP
+Basic Auth on the admin area:
+
+* `ADMIN_PASSWORD` - if set, the admin area requires Basic Auth with this password. If unset (the
+  default), the admin area remains unauthenticated.
+* `ADMIN_USER` - username to require alongside `ADMIN_PASSWORD`. Defaults to `admin`.
+
 ## Basic Setup Instructions
 
 1. Download repository and navigate to the directory in a shell.
