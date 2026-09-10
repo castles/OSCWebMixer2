@@ -92,6 +92,26 @@ test("round trip: an SD send_level command parses back to the same neutral value
 	assert.deepEqual(event, { type: "sendLevel", channel: 9, aux: 4, db: -3.25 });
 });
 
+test("serializeEvent is the exact inverse of parseIncoming", () => {
+	const a = createSdAdapter();
+	const messages = [
+		{ address: "/Console/Input_Channels", args: [48] },
+		{ address: "/Console/Aux_Outputs/modes", args: [1, 2, 1] },
+		{ address: "/Aux_Outputs/2/Buss_Trim/name", args: ["Monitors"] },
+		{ address: "/Input_Channels/12/Channel_Input/name", args: ["Kick"] },
+		{ address: "/Input_Channels/12/Aux_Send/3/send_level", args: [-6.5] },
+		{ address: "/Input_Channels/12/Aux_Send/3/send_pan", args: [0.25] },
+		{ address: "/Snapshots/Current_Snapshot", args: [4] },
+		{ address: "/Console/Session/!", args: [] }
+	];
+	for(const msg of messages)
+	{
+		const [event] = a.parseIncoming(msg);
+		assert.deepEqual(a.serializeEvent(event), msg, msg.address);
+	}
+	assert.equal(a.serializeEvent({ type: "keepAlivePing" }), null);
+});
+
 test("factory returns the SD adapter by default and for explicit SD/Quantum", () => {
 	assert.equal(createDeskAdapter().type, "SD");
 	assert.equal(createDeskAdapter({ type: "SD" }).type, "SD");

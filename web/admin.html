@@ -51,7 +51,11 @@
 					</div>
 					<div class="grid-column">
 						<h2>Mixing Desk</h2>
-						<div class="tips">On the console, go to Setup > External Control > DiGiCo iPad</div>
+						<div class="tips">On an SD / Quantum console, go to Setup &gt; External Control &gt; DiGiCo iPad. On an S-Series, enable OSC in the console menu (the aux send-bus mapping for S-Series is set in <code>config/global.json</code> &ndash; see <code>lib/desk/README.md</code>).</div>
+						<label>Console Type<select name="desk_type">
+							<option value="SD">SD / Quantum</option>
+							<option value="S">S-Series (S21 / S31)</option>
+						</select></label>
 						<label>IP Address <input type="text" name="desk_ip" required /></label>
 						<label>Send Port<input type="number" name="desk_send_port" disabled /></label>
 						<label>Receive Port<input type="number" name="desk_port" required /></label>

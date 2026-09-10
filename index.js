@@ -1,6 +1,5 @@
 "use strict";
 
-const osc = require("osc");
 const express = require("express");
 const http = require('http');
 const webSocket = require("ws");
@@ -10,6 +9,7 @@ const configManager = require("./lib/config/configManager.js")
 const logger = require('./lib/logging/logger.js');
 const { getMainIPAddress, generateColour } = require('./lib/utils/utils.js');
 const { createAdminAuthMiddleware } = require('./lib/adminAuth.js');
+const { createDeskConnection } = require('./lib/desk/deskConnection.js');
 
 /**
  * Stores global configuration for webmixer
@@ -22,9 +22,22 @@ let currentState = configManager.getCurrentStateOrDefault();
 logger.configure(config.debug, false);
 
 /**
- * the osc.js UDP Listening Port
+ * The link to the mixing console (owns the UDP/OSC port and the desk adapter).
+ * @type {ReturnType<typeof createDeskConnection>|null}
  */
-let udpPort = undefined;
+let deskConn = null;
+
+/**
+ * For bulk-load consoles (S-Series): when the last message of the /console/resend
+ * dump was seen, used to decide the dump has finished.
+ * @type {number}
+ */
+let lastBulkMessageAt = 0;
+
+/**
+ * Interval used to background-fill send levels / pans after loading.
+ */
+let cachePrimeInterval = null;
 
 /**
  * Socket connections that have connected
@@ -229,6 +242,13 @@ function startServer()
 			config.osc.port = req.body.osc_port;
 		}
 
+		let deskTypeChanged = false;
+		if(req.body.desk_type && config.desk.type != req.body.desk_type)
+		{
+			deskTypeChanged = true;
+			config.desk.type = req.body.desk_type;
+		}
+
 		config.debug = req.body.debug == "debug";
 		logger.setDebug(config.debug);
 
@@ -325,10 +345,9 @@ function startServer()
 		//force webmixer client and admin connections to reload
 		closeAllWebsocketConnections();
 
-		if(oscPortChanged)
+		if(oscPortChanged || deskTypeChanged)
 		{
-			stopOSC();
-			startOSC();
+			restartDeskConnection();
 		}
 
 		if(portChanged)
@@ -737,8 +756,136 @@ function loadConfig()
 }
 
 /**
- * Callback to request values from the desk. Will keep trying until values have loaded.
- * @returns null
+ * Handle a message from the console. The desk connection has already translated
+ * it into the SD-shaped internal representation, so this is dialect-independent.
+ * @param {object} oscMsg
+ * @param {string} sourceIp
+ */
+function handleDeskMessage(oscMsg, sourceIp)
+{
+	//session has changed. Reload
+	if(oscMsg.address == "/Console/Session/!")
+	{
+		cache.clear();
+		loaded = false;
+		closeAllWebsocketConnections();
+		beginLoad();
+		return;
+	}
+
+	//ignore messages that are already cached
+	if(cache.has(oscMsg.address) && JSON.stringify(cache.get(oscMsg.address)) == JSON.stringify(oscMsg))
+	{
+		logger.debug("Message already in cache " + JSON.stringify(oscMsg));
+		return;
+	}
+
+	oscMsg = processPlugins(oscMsg);
+	if(oscMsg === false)
+	{
+		return;
+	}
+
+	processSnapshotMsg(oscMsg);
+
+	maybeCacheResponse(oscMsg);
+
+	if(!loaded)
+	{
+		advanceLoad();
+		return;
+	}
+
+	//respond from cache if a value exists
+	const key = oscMsg.address.slice(0,-2);
+	if(oscMsg.address.substr(-2) == "/?" && cache.has(key))
+	{
+		broadcast(cache.get(key));
+		return;
+	}
+
+	broadcast(oscMsg, sourceIp); //send to everyone except the IP that it came from
+}
+
+/**
+ * Open the connection to the console and start loading values from it.
+ */
+function startDeskConnection()
+{
+	deskConn = createDeskConnection({
+		desk: config.desk,
+		listenPort: config.osc.port,
+		log: logger,
+		onFatal: function(message)
+		{
+			//can't receive OSC without this port - retrying is pointless, so fail loudly
+			logger.error("Could not open OSC port.");
+			logger.error(message);
+			process.exit(1);
+		},
+		onInbound: handleDeskMessage,
+		onReady: beginLoad
+	});
+	deskConn.start();
+	logger.info(`Loading values from mixing desk (${deskConn.type})...`);
+}
+
+/**
+ * Close the connection to the console.
+ */
+function stopDeskConnection()
+{
+	if(deskConn)
+	{
+		deskConn.stop();
+	}
+}
+
+/**
+ * Rebuild the console connection (OSC port or desk type changed).
+ */
+function restartDeskConnection()
+{
+	stopDeskConnection();
+	if(cachePrimeInterval)
+	{
+		clearInterval(cachePrimeInterval);
+	}
+	cache.clear();
+	loaded = false;
+	startDeskConnection();
+}
+
+/**
+ * Begin loading console values. Incremental desks (SD / Quantum) are asked for
+ * one thing at a time; bulk desks (S-Series) are asked once for everything and
+ * loading is treated as done when the dump stops arriving.
+ */
+function beginLoad()
+{
+	loaded = false;
+
+	if(deskConn.loadStyle == "bulk")
+	{
+		//seed with facts we know from config (e.g. aux modes, which the S-Series
+		//never reports)
+		for(const message of deskConn.initialEvents())
+		{
+			handleDeskMessage(message, config.desk.ip);
+		}
+		lastBulkMessageAt = Date.now();
+		sendBulkLoadRequest();
+		checkBulkLoadSettled();
+	}
+	else
+	{
+		fetchValues();
+	}
+}
+
+/**
+ * Incremental load: ask the desk for the channel count, keep retrying until we
+ * start getting answers.
  */
 function fetchValues()
 {
@@ -746,95 +893,55 @@ function fetchValues()
 	{
 		return;
 	}
-
-	const osc = {address: "/Console/Channels/?", args: []};
-	udpPort.send(osc, config.desk.ip, config.desk.port);
-
+	deskConn.sendRaw(deskConn.query({ kind: "channelCount" }));
 	logger.debug("Requesting channels from Mixing Desk");
-
 	setTimeout(fetchValues, 3000);
 }
 
 /**
- * Start listening to OSC messages from the network
+ * Bulk load: ask the desk to dump everything, keep retrying until it does.
  */
-function startOSC()
+function sendBulkLoadRequest()
 {
-	udpPort = new osc.UDPPort({
-		localAddress: "0.0.0.0",
-		localPort: config.osc.port
-	});
-
-	udpPort.on("error", function (err)
+	if(loaded)
 	{
-		if(err.code == "EHOSTDOWN" || err.code == "EHOSTUNREACH")
-		{
-			logger.error(err.address + " is not responding");
-			return;
-		}
-		if(err.code == "EADDRINUSE" || err.code == "EACCES")
-		{
-			//can't receive OSC without this port - retrying is pointless, so fail loudly
-			logger.error("Could not open OSC port.");
-			logger.error(`OSC port ${config.osc.port} is ${err.code == "EACCES" ? "not permitted" : "already in use"}. ` +
-				`Close whatever is using it or change the OSC Receive Port in the admin area.`);
-			process.exit(1);
-		}
-		logger.error("UDP error: " + (err && err.stack ? err.stack : err));
-	});
+		return;
+	}
+	deskConn.sendRaw(deskConn.bulkLoadRequest());
+	setTimeout(sendBulkLoadRequest, 3000);
+}
 
-	udpPort.on("message", function(oscMsg, timeTag, info)
+/**
+ * Bulk load: the desk does not ack per value, so treat the dump as finished once
+ * the channel count has arrived and nothing new has for a moment.
+ */
+function checkBulkLoadSettled()
+{
+	if(loaded)
 	{
-		logger.debug("Message received over UDP: " + JSON.stringify(oscMsg));
+		return;
+	}
+	if(cache.has("/Console/Input_Channels") && Date.now() - lastBulkMessageAt > 1500)
+	{
+		finishLoading();
+		return;
+	}
+	setTimeout(checkBulkLoadSettled, 400);
+}
 
-		//session has changed. Reload
-		if(oscMsg.address == "/Console/Session/!")
-		{
-			cache.clear();
-			loaded = false;
-			closeAllWebsocketConnections();
-			fetchValues();
-			return;
-		}
-
-		//ignore messages that are already cached
-		if(cache.has(oscMsg.address) && JSON.stringify(cache.get(oscMsg.address)) == JSON.stringify(oscMsg))
-		{
-			logger.debug("Message already in cache " + JSON.stringify(oscMsg));
-			return;
-		}
-
-		oscMsg = processPlugins(oscMsg);
-		if(oscMsg === false)
-		{
-			return;
-		}
-
-		processSnapshotMsg(oscMsg);
-
-		maybeCacheResponse(oscMsg);
-
-		if(!loaded)
-		{
-			loadNextRequiredParameter();
-			return;
-		}
-
-		//respond from cache if a value exists
-		const key = oscMsg.address.slice(0,-2);
-		if(oscMsg.address.substr(-2) == "/?" && cache.has(key))
-		{
-			broadcast(cache.get(key));
-			return;
-		}
-
-		broadcast(oscMsg, info.address); //send to everyone except the IP that it came from
-	});
-
-	udpPort.on("ready", fetchValues);
-
-	udpPort.open();
-	logger.info("Loading values from mixing desk...");
+/**
+ * Advance the load one step whenever a message arrives before we are loaded.
+ */
+function advanceLoad()
+{
+	if(deskConn.loadStyle == "bulk")
+	{
+		lastBulkMessageAt = Date.now();
+	}
+	else
+	{
+		loadNextRequiredParameter();
+	}
 }
 
 /**
@@ -861,7 +968,7 @@ function processSnapshotMsg(oscMsg)
 		}
 
 		//request the names for the current snapshots. We will use the response to store the snapshot name below.
-		udpPort.send({address: "/Snapshots/names/?", args: []}, config.desk.ip, config.desk.port);
+		deskConn.sendRaw({address: "/Snapshots/names/?", args: []});
 
 		return;
 	}
@@ -916,10 +1023,10 @@ function closeAllWebsocketConnections()
  */
 function broadcast(oscMsg, source)
 {
-	//notify desk
+	//notify desk (the connection translates the message to the desk's dialect)
 	if(config.desk.ip != source)
 	{
-		udpPort.send(oscMsg, config.desk.ip, config.desk.port);
+		deskConn.sendToDesk(oscMsg);
 		logger.debug(`Sent ${JSON.stringify(oscMsg)} to Mixing Desk (${config.desk.ip}:${config.desk.port})`);
 	}
 
@@ -930,7 +1037,7 @@ function broadcast(oscMsg, source)
 		{
 			if(external.broadcast && (external.loopback || external.ip != source))
 			{
-				udpPort.send(oscMsg, external.ip, external.port);
+				deskConn.sendTo(external.ip, external.port, oscMsg);
 				logger.debug(`Sent ${JSON.stringify(oscMsg)} to External "${external.name}" (${external.ip}:${external.port})`);
 			}
 		}
@@ -957,13 +1064,6 @@ function broadcast(oscMsg, source)
 	connections = validConnections;
 }
 
-/**
- * Stop listening to OSC messages
- */
-function stopOSC()
-{
-	udpPort.close();
-}
 
 /**
  * Determine if we should cache the message and store it in memory.
@@ -992,22 +1092,22 @@ function maybeCacheResponse(msg)
 }
 
 /**
- * Request the required parameters from the desk in order.
- * This gets called every time a mesage arrives until all the required parameters have loaded.
+ * Incremental load: request the required parameters from the desk in order.
+ * This gets called every time a message arrives until all the required
+ * parameters have loaded.
  */
 function loadNextRequiredParameter()
 {
 	if(!cache.has("/Console/Input_Channels"))
 	{
-		//reguest channel count (amoung other things)
-		udpPort.send({address: "/Console/Channels/?", args: []}, config.desk.ip, config.desk.port);
+		//request channel count (among other things)
+		deskConn.sendRaw(deskConn.query({ kind: "channelCount" }));
 		return;
 	}
 
 	if(!cache.has("/Console/Aux_Outputs/modes"))
 	{
-		//request aux modes
-		udpPort.send({address: "/Console/Aux_Outputs/modes/?", args: []}, config.desk.ip, config.desk.port);
+		deskConn.sendRaw(deskConn.query({ kind: "auxModes" }));
 		return;
 	}
 
@@ -1016,7 +1116,7 @@ function loadNextRequiredParameter()
 	{
 		if(!cache.has(`/Aux_Outputs/${i}/Buss_Trim/name`))
 		{
-			udpPort.send({address: `/Aux_Outputs/${i}/Buss_Trim/name/?`, args: []}, config.desk.ip, config.desk.port);
+			deskConn.sendRaw(deskConn.query({ kind: "auxName", aux: i }));
 			return;
 		}
 	}
@@ -1026,16 +1126,34 @@ function loadNextRequiredParameter()
 	{
 		if(!cache.has(`/Input_Channels/${i}/Channel_Input/name`))
 		{
-			udpPort.send({address: `/Input_Channels/${i}/Channel_Input/name/?`, args: []}, config.desk.ip, config.desk.port);
+			deskConn.sendRaw(deskConn.query({ kind: "channelName", channel: i }));
 			return;
 		}
 	}
 
 	//request current snapshot. If there is a snapshot then the index on the snapshot will be returned.
 	//We can then request the name of that snapshot
-	udpPort.send({address: "/Snapshots/Current_Snapshot/?", args: []}, config.desk.ip, config.desk.port);
+	deskConn.sendRaw(deskConn.query({ kind: "snapshot" }));
 
-	cachePrimeInterval = setInterval(primeCache, 100);
+	finishLoading();
+}
+
+/**
+ * Mark loading complete and open the web socket server for clients.
+ */
+function finishLoading()
+{
+	if(loaded)
+	{
+		return;
+	}
+
+	//background-fill the send levels / pans for incremental desks; a bulk desk
+	//already sent them all in the dump
+	if(deskConn.loadStyle == "incremental")
+	{
+		cachePrimeInterval = setInterval(primeCache, 100);
+	}
 
 	loaded = true;
 	logger.info("Loaded values from mixing desk.");
@@ -1043,8 +1161,6 @@ function loadNextRequiredParameter()
 	startWebSocketServer();
 	logger.info("Webmixer ready to use.");
 }
-
-let cachePrimeInterval = null;
 
 /**
  * Load AUX levels and panning values into the cache.
@@ -1075,13 +1191,13 @@ function primeCache()
 				//request level
 				if(!cache.has(`/Input_Channels/${channel+1}/Aux_Send/${aux+1}/send_level`))
 				{
-					udpPort.send({address: `/Input_Channels/${channel+1}/Aux_Send/${aux+1}/send_level/?`, args: []}, config.desk.ip, config.desk.port);
+					deskConn.sendRaw(deskConn.query({ kind: "sendLevel", channel: channel + 1, aux: aux + 1 }));
 					return;
 				}
 				//request pan
 				if(!cache.has(`/Input_Channels/${channel+1}/Aux_Send/${aux+1}/send_pan`))
 				{
-					udpPort.send({address: `/Input_Channels/${channel+1}/Aux_Send/${aux+1}/send_pan/?`, args: []}, config.desk.ip, config.desk.port);
+					deskConn.sendRaw(deskConn.query({ kind: "sendPan", channel: channel + 1, aux: aux + 1 }));
 					return;
 				}
 			}
@@ -1106,7 +1222,7 @@ function sendUDP(name, msg)
 		{
 			if(external.name == name)
 			{
-				udpPort.send(msg, external.ip, external.port);
+				deskConn.sendTo(external.ip, external.port, msg);
 					logger.debug(`Sent ${JSON.stringify(msg)} to External "${external.name}" (${external.ip}:${external.port})`);
 			}
 		}
@@ -1136,4 +1252,4 @@ function processPlugins(oscMsg)
 }
 
 startServer();
-startOSC();
+startDeskConnection();

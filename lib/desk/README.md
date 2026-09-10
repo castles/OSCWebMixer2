@@ -78,33 +78,58 @@ desk.autoReply(deskEvent)     // OscMessage | null   (S: pong for ping)
 { kind: "snapshot" }
 ```
 
-## Wiring it into `index.js` (not done yet)
+## How `index.js` uses it
 
-This module is standalone and tested; the server still talks raw SD OSC. To
-adopt it:
+`deskConnection.js` wraps the adapter, the osc.js UDP port and the load state
+machine. `index.js` creates one connection and keeps everything else
+(the address-keyed `cache`, `buildConfig()`, the WebSocket protocol, the HTTP
+routes) working on the **SD-shaped internal representation** - the adapter's
+`serializeEvent()` turns every neutral event back into that shape on the way in,
+and `sendToDesk()` turns it into the desk's dialect on the way out.
 
-1. `const desk = createDeskAdapter(config.desk);` after loading config.
-2. **Inbound UDP**: replace the address matching in the `udpPort.on("message")`
-   handler with `desk.parseIncoming(oscMsg)`. For each event: update the cache
-   (key it by the neutral shape, e.g. `sendLevel:{ch}:{aux}`), send
-   `desk.autoReply(event)` if non-null, and forward the event to WebSocket
-   clients.
-3. **Loading**:
-   - `desk.loadStyle === "incremental"` (SD): keep the current
-     "ask for the next missing thing" loop, but get the address from
-     `desk.buildQuery(request)` instead of hard-coding it.
-   - `desk.loadStyle === "bulk"` (S): send `desk.bulkLoadRequest()` once, apply
-     `desk.initialEvents()`, then treat loading as complete when no new event
-     has arrived for ~1.5 s (the S-Series does not ack per value, and withholds
-     initial values for sends > 15 without the channel-count upgrade — see the
-     mock's `--missing-high-sends`).
-4. **Outbound**: the WebSocket protocol becomes neutral JSON
-   (`{ type, channel, aux, value }`); the server turns each into
-   `desk.buildCommand(cmd)` for the desk. `web/mixer.js` sends neutral messages
-   instead of raw SD addresses (rebuild `mixer.min.js`).
-5. **Admin UI**: a `desk.type` selector on Global Settings; when `S`, a
-   `send #` field + `stereo` toggle per aux on the Auxiliaries tab, persisted in
-   the global config.
+- **Inbound**: `deskConnection` runs `parseIncoming` -> `autoReply` (S pong) ->
+  `serializeEvent`, then calls `onInbound(sdShapedMsg)`. For SD, anything the
+  adapter does not model is passed through untouched, so SD behaviour is
+  unchanged; for S, unrecognised messages are dropped.
+- **Loading**: `beginLoad()` branches on `deskConn.loadStyle`. Incremental (SD)
+  keeps the "ask for the next missing thing" loop, getting each address from
+  `deskConn.query(request)`. Bulk (S) sends `deskConn.bulkLoadRequest()`, seeds
+  `deskConn.initialEvents()` (synthetic aux modes), and finishes when the
+  `/console/resend` dump stops arriving for ~1.5 s - the S-Series does not ack
+  per value and withholds initial values for sends > 15 without the channel-count
+  upgrade (see the mock's `--missing-high-sends`).
+- **Outbound**: `broadcast()`'s desk send goes through `deskConn.sendToDesk()`,
+  which translates the SD-shaped message. The WebSocket protocol and
+  `web/mixer.js` are unchanged - the client still speaks SD, the connection
+  translates.
 
-Test against hardware (or `npm run mock-desk` / `npm run mock-desk-s`) at each
-step.
+## Configuring an S-Series desk
+
+In `config/global.json`:
+
+```json
+"desk": {
+  "ip": "10.0.0.5",
+  "port": 8000,
+  "type": "S",
+  "auxes": [
+    { "channel": 70, "send": 1, "stereo": true },
+    { "channel": 71, "send": 2, "stereo": false }
+  ]
+}
+```
+
+`type` can also be set from the **Console Type** dropdown in the admin Global
+Settings tab. The `auxes` mapping (each aux's channel number, send-bus number and
+whether it is stereo) has no admin UI yet - it is hand-edited here. Run
+`node . debug` (or `npm run mock-desk-s`) and move faders on the console to find
+the right send-bus numbers, as with v1.
+
+## Still to verify against real hardware
+
+- how / whether the S-Series reports the current snapshot and its name
+- the exact send-level dB range and taper
+- whether `/console/resend` needs to be repeated or paced on a busy console
+
+Test with `npm run mock-desk` / `npm run mock-desk-s` and, when possible, a real
+console.

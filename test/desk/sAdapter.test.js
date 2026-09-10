@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const { createSAdapter } = require("../../lib/desk/sAdapter.js");
-const { createDeskAdapter } = require("../../lib/desk/deskAdapter.js");
+const { createDeskAdapter, eventToCommand } = require("../../lib/desk/deskAdapter.js");
 
 // aux 1 -> channel 70 / send 1 / stereo
 // aux 2 -> channel 71 / send 2 / mono
@@ -124,6 +124,16 @@ test("round trip: an S send command parses back to the same neutral value", () =
 			assert.ok(Math.abs(event.pan - 0.2) < 1e-9);
 		}
 	}
+});
+
+test("eventToCommand turns a value event into the command that sets it", () => {
+	assert.deepEqual(eventToCommand({ type: "sendLevel", channel: 3, aux: 2, db: -4 }),
+		{ type: "setSendLevel", channel: 3, aux: 2, db: -4 });
+	assert.deepEqual(eventToCommand({ type: "sendPan", channel: 3, aux: 2, pan: 0.7 }),
+		{ type: "setSendPan", channel: 3, aux: 2, pan: 0.7 });
+	assert.deepEqual(eventToCommand({ type: "channelName", channel: 3, name: "Kick" }),
+		{ type: "setChannelName", channel: 3, name: "Kick" });
+	assert.equal(eventToCommand({ type: "auxModes", modes: [1] }), null);
 });
 
 test("factory returns the S adapter for S / S-Series and passes the aux config through", () => {

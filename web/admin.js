@@ -574,6 +574,13 @@ function loadConfig()
 			deskSendPort.value = json.osc.port;
 			deskIP.value = json.desk.ip == "" ? json.server.ip.replace(/\.\d+$/, "") + "." : json.desk.ip;
 			deskReceivePort.value = deskPort;
+
+			const deskType = document.querySelector("select[name=desk_type]");
+			if(deskType)
+			{
+				deskType.value = json.desk.type || "SD";
+			}
+
 			debug.checked = json.debug == true;
 	
 			clearExternals();
