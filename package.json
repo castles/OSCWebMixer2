@@ -11,6 +11,7 @@
     },
     "scripts": {
         "start": "node index.js",
+        "test": "node --test \"test/**/*.test.js\"",
         "mock-desk": "node tools/mock-desk.js",
         "build:js": "esbuild web/mixer.js --minify --outfile=web/mixer.min.js",
         "build:css": "esbuild web/mixer.css --minify --outfile=web/mixer.min.css",

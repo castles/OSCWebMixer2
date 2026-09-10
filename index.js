@@ -5,10 +5,10 @@ const express = require("express");
 const http = require('http');
 const webSocket = require("ws");
 const fs = require('fs');
-const crypto = require('crypto');
 
 const Logger = require('./lib/logger.js');
 const { getMainIPAddress, addToObject, generateColour } = require('./lib/utils.js');
+const { createAdminAuthMiddleware } = require('./lib/adminAuth.js');
 
 /**
  * Stores global configuration for webmixer
@@ -210,32 +210,9 @@ function startServer()
 	});
 	server.listen(config.server.port);
 
-	// Require authentication before allowing any administrative operation
-	function requireAdminAuth(req, res, next)
-	{
-		const expectedPass = process.env.ADMIN_PASSWORD;
-		const expectedUser = process.env.ADMIN_USER || "admin";
-		const header = req.headers.authorization || "";
-		const [scheme, encoded] = header.split(" ");
-		let user = "", pass = "";
-		if(scheme === "Basic" && encoded)
-		{
-			const decoded = Buffer.from(encoded, "base64").toString("utf-8");
-			const sep = decoded.indexOf(":");
-			user = decoded.slice(0, sep);
-			pass = decoded.slice(sep + 1);
-		}
-		const userBuf = Buffer.from(user), passBuf = Buffer.from(pass);
-		const expUserBuf = Buffer.from(expectedUser), expPassBuf = Buffer.from(expectedPass || "");
-		const userOk = userBuf.length === expUserBuf.length && crypto.timingSafeEqual(userBuf, expUserBuf);
-		const passOk = !!expectedPass && passBuf.length === expPassBuf.length && crypto.timingSafeEqual(passBuf, expPassBuf);
-		if(!userOk || !passOk)
-		{
-			res.set("WWW-Authenticate", "Basic realm=\"Admin\"");
-			return res.status(401).send("Unauthorized");
-		}
-		next();
-	}
+	// Protects the admin area. Unauthenticated by default (matches the trusted-LAN
+	// deployment model); set ADMIN_USER/ADMIN_PASSWORD to require Basic Auth instead.
+	const requireAdminAuth = createAdminAuthMiddleware();
 
 	//when a post request occurs in the admin area
 	app.post('/admin', requireAdminAuth, (req, res) => {
@@ -395,7 +372,7 @@ function startServer()
 	});
 
 	//when a get request occurs in the admin area
-	app.get('/admin', (req, res) => {
+	app.get('/admin', requireAdminAuth, (req, res) => {
 		res.sendFile(__dirname + "/web/admin.html");
 	});
 
