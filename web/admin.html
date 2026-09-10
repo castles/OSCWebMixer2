@@ -23,7 +23,7 @@
 	
 	<nav id="mainNav">
 		<ul>
-			<li><a href="#global" class="selected">Global Settings</a></li>
+			<li><a href="#global" class="selected">Global Settings<div class="status"></div></a></li>
 			<li><a href="#aux">Auxiliaries</a></li>
 			<li><a href="#channels">Channels</a></li>
 			<li><a href="#additional-devices">Additional Devices</a></li>
@@ -50,11 +50,7 @@
 						<label><input type="checkbox" name="debug" value="debug" />Log debug messages</label>
 					</div>
 					<div class="grid-column">
-						<div class="title-wrap">
-							<h2>Mixing Desk</h2>
-							<div class="status"></div>
-						</div>
-
+						<h2>Mixing Desk</h2>
 						<div class="tips">On the console, go to Setup > External Control > DiGiCo iPad</div>
 						<label>IP Address <input type="text" name="desk_ip" required /></label>
 						<label>Send Port<input type="number" name="desk_send_port" disabled /></label>

@@ -466,18 +466,6 @@ button.down::before
 	clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
 }
 
-.title-wrap {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	margin: 40px 0 15px;
-}
-
-.title-wrap h2 {
-	margin: 0;
-}
-
-
 @media(hover:hover)
 {
 	.icon:hover
