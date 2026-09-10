@@ -3,5 +3,6 @@ services:
     image: oscwebmixer2:latest
     container_name: webmixer
     restart: unless-stopped
+    network_mode: host
     volumes:
       - ./config:/webmixer/config

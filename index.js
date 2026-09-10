@@ -183,6 +183,12 @@ function startServer()
 	// Create an Express-based Web Socket server that clients can connect to
 	let app = express();
 
+	// Apply no-cache policy for admin endpoints to prevent stale browser state
+	app.use(["/admin", "/admin.html", "/admin.js", "/admin.css"], (req, res, next) => {
+		res.set("Cache-Control", "no-store");
+		next();
+	});
+
 	// Tell express to use all the static files in /web
 	app.use("/", express.static(__dirname + "/web"));
 

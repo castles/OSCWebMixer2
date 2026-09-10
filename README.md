@@ -13,6 +13,7 @@ A rewrite of [OSCWebMixer](https://github.com/castles/OSCWebMixer) - A server th
 * Startup is much quicker because webmixer requests only the information it requires
 * You can group your channels to make them easier to find
 * The current snapshot name is displayed in webmixer
+* Channel and auxiliary configuration can be saved as named presets and recalled later
 
 ## Donate
 
