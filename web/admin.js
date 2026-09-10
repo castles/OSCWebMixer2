@@ -142,6 +142,90 @@ document.getElementById("addExternal").addEventListener("click", (e) => {
 	createExternal();
 });
 
+const deskTypeSelect = document.querySelector("select[name=desk_type]"),
+sAuxRouting = document.getElementById("sAuxRouting"),
+sAuxRows = document.getElementById("sAuxRows");
+
+/**
+ * Show the S-Series aux routing block only when the S-Series console type is selected.
+ */
+function updateSAuxRoutingVisibility()
+{
+	if(sAuxRouting)
+	{
+		sAuxRouting.hidden = deskTypeSelect.value != "S";
+	}
+}
+
+/**
+ * Add a row to the S-Series aux routing editor.
+ * @param {number|string} channel - the aux's master channel number
+ * @param {number|string} send - the aux's send bus number
+ * @param {boolean} stereo
+ */
+function createSAuxRow(channel = "", send = "", stereo = false)
+{
+	const row = document.createElement("div");
+
+	const number = document.createElement("label");
+	number.className = "listNumber";
+	number.textContent = String(sAuxRows.children.length + 1).padStart(2, "0");
+	row.appendChild(number);
+
+	const channelLabel = document.createElement("label");
+	channelLabel.textContent = "Channel";
+	const channelInput = document.createElement("input");
+	channelInput.type = "number";
+	channelInput.min = 1;
+	channelInput.name = "sAuxChannel[]";
+	channelInput.value = channel;
+	channelLabel.appendChild(channelInput);
+	row.appendChild(channelLabel);
+
+	const sendLabel = document.createElement("label");
+	sendLabel.textContent = "Send";
+	const sendInput = document.createElement("input");
+	sendInput.type = "number";
+	sendInput.min = 1;
+	sendInput.name = "sAuxSend[]";
+	sendInput.value = send;
+	sendLabel.appendChild(sendInput);
+	row.appendChild(sendLabel);
+
+	row.appendChild(createCheckboxField("sAuxStereo[]", stereo, "Stereo"));
+
+	const deleteButton = document.createElement("button");
+	deleteButton.type = "button";
+	deleteButton.className = "delete";
+	deleteButton.innerHTML = "&times;";
+	deleteButton.addEventListener("click", () => {
+		row.remove();
+		renumberSAuxRows();
+	});
+	row.appendChild(deleteButton);
+
+	sAuxRows.appendChild(row);
+}
+
+function renumberSAuxRows()
+{
+	[...sAuxRows.children].forEach((row, i) => {
+		row.querySelector(".listNumber").textContent = String(i + 1).padStart(2, "0");
+	});
+}
+
+if(deskTypeSelect)
+{
+	deskTypeSelect.addEventListener("change", updateSAuxRoutingVisibility);
+}
+if(document.getElementById("addSAux"))
+{
+	document.getElementById("addSAux").addEventListener("click", (e) => {
+		e.preventDefault();
+		createSAuxRow();
+	});
+}
+
 /**
  * Validates that the provided string is a valid IPv4 or IPv6 Address
  * @param {string} ip
@@ -575,14 +659,23 @@ function loadConfig()
 			deskIP.value = json.desk.ip == "" ? json.server.ip.replace(/\.\d+$/, "") + "." : json.desk.ip;
 			deskReceivePort.value = deskPort;
 
-			const deskType = document.querySelector("select[name=desk_type]");
-			if(deskType)
+			if(deskTypeSelect)
 			{
-				deskType.value = json.desk.type || "SD";
+				deskTypeSelect.value = json.desk.type || "SD";
+			}
+
+			if(sAuxRows)
+			{
+				sAuxRows.innerHTML = "";
+				for(let aux of (json.desk.auxes || []))
+				{
+					createSAuxRow(aux.channel, aux.send, aux.stereo);
+				}
+				updateSAuxRoutingVisibility();
 			}
 
 			debug.checked = json.debug == true;
-	
+
 			clearExternals();
 			for(let external of json.externalDevices)
 			{

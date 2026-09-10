@@ -119,11 +119,12 @@ In `config/global.json`:
 }
 ```
 
-`type` can also be set from the **Console Type** dropdown in the admin Global
-Settings tab. The `auxes` mapping (each aux's channel number, send-bus number and
-whether it is stereo) has no admin UI yet - it is hand-edited here. Run
-`node . debug` (or `npm run mock-desk-s`) and move faders on the console to find
-the right send-bus numbers, as with v1.
+Both `type` and the `auxes` mapping can also be set from the admin **Global
+Settings** tab: pick the console type, then fill in the **S-Series Aux Routing**
+rows (one per aux, in order, with its master channel number and send-bus number).
+Run `node . debug` (or `npm run mock-desk-s`, which prints a ready-to-paste
+mapping) and move faders on the console to find the right numbers, as with v1.
+The aux *names* are read from the console; you only supply the routing.
 
 ## Still to verify against real hardware
 

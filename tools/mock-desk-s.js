@@ -195,9 +195,12 @@ function createMockSDesk(opts = {})
 		{
 			log(`  "${a.name}"  channel ${a.channel}  send ${a.send}  ${a.stereo ? "stereo" : "mono"}`);
 		}
+		log("");
+		log("Paste this into the admin Global Settings > S-Series Aux Routing (or config/global.json \"desk\"):");
+		log(`  "auxes": ${JSON.stringify(auxes.map((a) => ({ channel: a.channel, send: a.send, stereo: a.stereo })))}`);
 		if(missingHighSends)
 		{
-			log(`!! --missing-high-sends: initial values for sends > ${HIGH_SEND_LIMIT} will NOT be sent`);
+			log(`\n!! --missing-high-sends: initial values for sends > ${HIGH_SEND_LIMIT} will NOT be sent`);
 		}
 	});
 

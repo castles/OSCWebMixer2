@@ -242,11 +242,40 @@ function startServer()
 			config.osc.port = req.body.osc_port;
 		}
 
-		let deskTypeChanged = false;
+		let deskChanged = false;
 		if(req.body.desk_type && config.desk.type != req.body.desk_type)
 		{
-			deskTypeChanged = true;
+			deskChanged = true;
 			config.desk.type = req.body.desk_type;
+		}
+
+		//S-Series aux routing (each aux's master channel, send bus and stereo flag)
+		if(config.desk.type == "S")
+		{
+			let sAuxes = [];
+			if(req.body.sAuxChannel)
+			{
+				let channels = [].concat(req.body.sAuxChannel);
+				let sends = [].concat(req.body.sAuxSend);
+				let stereo = [].concat(req.body.sAuxStereo);
+				for(let i=0; i<channels.length; i++)
+				{
+					if(channels[i] === "" || sends[i] === "")
+					{
+						continue;
+					}
+					sAuxes.push({
+						channel: parseInt(channels[i], 10),
+						send: parseInt(sends[i], 10),
+						stereo: stereo[i] == "true"
+					});
+				}
+			}
+			if(JSON.stringify(sAuxes) != JSON.stringify(config.desk.auxes || []))
+			{
+				deskChanged = true;
+				config.desk.auxes = sAuxes;
+			}
 		}
 
 		config.debug = req.body.debug == "debug";
@@ -345,7 +374,7 @@ function startServer()
 		//force webmixer client and admin connections to reload
 		closeAllWebsocketConnections();
 
-		if(oscPortChanged || deskTypeChanged)
+		if(oscPortChanged || deskChanged)
 		{
 			restartDeskConnection();
 		}
@@ -354,10 +383,12 @@ function startServer()
 		{
 			closeAllWebsocketConnections();
 
-			//close web socket server if it is running
+			//close web socket server if it is running - it is bound to the old
+			//http server and will be recreated once loading finishes on the new one
 			if(wss)
 			{
 				wss.close();
+				wss = null;
 			}
 
 			//close web server
@@ -369,6 +400,12 @@ function startServer()
 			res.send(`<script>document.location.href="${getServerURL()}/admin";</script>`);
 
 			startServer();
+
+			//loading already finished once, so re-open the socket server on the new http server
+			if(loaded)
+			{
+				startWebSocketServer();
+			}
 			return;
 		}
 
@@ -622,7 +659,13 @@ function getServerURL()
 }
 
 function startWebSocketServer() {
-	// Create the web socket server
+	// only one web socket server per http server - loading can finish more than
+	// once (session reload, desk type change) but the server stays up
+	if(wss)
+	{
+		return;
+	}
+
 	wss = new webSocket.Server({
 		server: server
 	});
@@ -828,6 +871,12 @@ function startDeskConnection()
 	});
 	deskConn.start();
 	logger.info(`Loading values from mixing desk (${deskConn.type})...`);
+
+	if(deskConn.type == "S" && (!config.desk.auxes || config.desk.auxes.length == 0))
+	{
+		logger.warn("S-Series console selected but no aux routing is configured, so no auxiliaries will load. " +
+			"Add them on the admin Global Settings tab (or set desk.auxes in config/global.json).");
+	}
 }
 
 /**

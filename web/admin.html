@@ -51,7 +51,7 @@
 					</div>
 					<div class="grid-column">
 						<h2>Mixing Desk</h2>
-						<div class="tips">On an SD / Quantum console, go to Setup &gt; External Control &gt; DiGiCo iPad. On an S-Series, enable OSC in the console menu (the aux send-bus mapping for S-Series is set in <code>config/global.json</code> &ndash; see <code>lib/desk/README.md</code>).</div>
+						<div class="tips">On an SD / Quantum console, go to Setup &gt; External Control &gt; DiGiCo iPad. On an S-Series, enable OSC in the console menu.</div>
 						<label>Console Type<select name="desk_type">
 							<option value="SD">SD / Quantum</option>
 							<option value="S">S-Series (S21 / S31)</option>
@@ -60,6 +60,13 @@
 						<label>Send Port<input type="number" name="desk_send_port" disabled /></label>
 						<label>Receive Port<input type="number" name="desk_port" required /></label>
 					</div>
+				</div>
+
+				<div id="sAuxRouting" hidden>
+					<h2>S-Series Aux Routing</h2>
+					<div class="tips">The S-Series does not tell webmixer which channels are auxes. Add a row per aux, in order, with its master channel number and send-bus number. Find these by moving faders on the console while watching its OSC monitor (or run <code>npm run mock-desk-s</code>).</div>
+					<div id="sAuxRows" class="list"></div>
+					<button type="button" id="addSAux">+ Add Aux</button>
 				</div>
 			</section>
 
