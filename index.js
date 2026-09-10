@@ -6,14 +6,20 @@ const http = require('http');
 const webSocket = require("ws");
 const fs = require('fs');
 
-const Logger = require('./lib/logger.js');
-const { getMainIPAddress, addToObject, generateColour } = require('./lib/utils.js');
+const configManager = require("./lib/config/configManager.js")
+const logger = require('./lib/logging/logger.js');
+const { getMainIPAddress, generateColour } = require('./lib/utils/utils.js');
 const { createAdminAuthMiddleware } = require('./lib/adminAuth.js');
 
 /**
  * Stores global configuration for webmixer
  */
-let config = loadConfig();
+configManager.ensureConfigDirectoryExists();
+let config = configManager.getGlobalConfigOrDefault();
+let currentState = configManager.getCurrentStateOrDefault();
+
+// Configure logger to use settings from global config
+logger.configure(config.debug, false);
 
 /**
  * the osc.js UDP Listening Port
@@ -51,11 +57,6 @@ let currentSnapshotName = "";
 let currentSnapshot = -1;
 
 /**
- * Logs messages to the console
- */
-const logger = new Logger(config.debug, false);
-
-/**
  * Last-resort handlers so an unexpected error is logged instead of silently
  * killing the server (which would drop every connected device mid-show).
  */
@@ -79,12 +80,6 @@ let server = null;
  * @type {WebSocketServer}
  */
 let wss = null;
-
-/**
- * Loading Spinner
- * @type {import('ora').Ora}
- */
-let spinner = null;
 
 const mixServerIP = getMainIPAddress();
 
@@ -130,7 +125,7 @@ const plugins = loadPlugins();
 function buildConfig()
 {
 	let auxilaries = [];
-	if(cache.has("/Console/Aux_Outputs/modes") && config.auxilaries != undefined)
+	if(cache.has("/Console/Aux_Outputs/modes") && currentState.auxes != undefined)
 	{
 		let auxModes = cache.get("/Console/Aux_Outputs/modes").args;
 		for(const [index, mode] of auxModes.entries())
@@ -142,30 +137,30 @@ function buildConfig()
 			}
 
 			auxilaries.push({
-				enabled: config.auxilaries[index] ? config.auxilaries[index].enabled : true,
+				enabled: currentState.auxes[index] ? currentState.auxes[index].enabled : true,
 				label: cache.get(`/Aux_Outputs/${index+1}/Buss_Trim/name`).args[0],
 				channel: index + 1,
 				stereo: mode == 2,
-				colour: config.auxilaries[index] ? config.auxilaries[index].colour : generateColour(auxModes.length, index),
-				icon: config.auxilaries[index] ? config.auxilaries[index].icon : ""
+				colour: currentState.auxes[index] ? currentState.auxes[index].colour : generateColour(auxModes.length, index),
+				icon: currentState.auxes[index] ? currentState.auxes[index].icon : ""
 			});
 		}
 	}
 
 	let channels = [];
-	if(cache.has("/Console/Input_Channels") && config.channels != undefined)
+	if(cache.has("/Console/Input_Channels") && currentState.channels != undefined)
 	{
 		for(let i=0; i<cache.get("/Console/Input_Channels").args[0]; i++)
 		{
 			if(cache.has(`/Input_Channels/${i+1}/Channel_Input/name`))
 			{
 				channels.push({
-					enabled: config.channels[i] ? config.channels[i].enabled : true,
+					enabled: currentState.channels[i] ? currentState.channels[i].enabled : true,
 					label: cache.get(`/Input_Channels/${i+1}/Channel_Input/name`).args[0],
 					channel: i + 1,
-					order: config.channels[i]?.order ?? i,
-					title: config.channels[i] ? config.channels[i].title : "",
-					icon: config.channels[i] ? config.channels[i].icon : ""
+					order: currentState.channels[i]?.displayOrder ?? i,
+					title: currentState.channels[i] ? currentState.channels[i].title : "",
+					icon: currentState.channels[i] ? currentState.channels[i].icon : ""
 				});
 			}
 		}
@@ -195,6 +190,8 @@ function startServer()
 	app.use(express.urlencoded({
 		extended: true
 	}));
+
+	app.use(express.json());
 
 	// Create the web server
 	server = http.createServer(app);
@@ -233,16 +230,17 @@ function startServer()
 		}
 
 		config.debug = req.body.debug == "debug";
+		logger.setDebug(config.debug);
 
 		config.desk.ip = req.body.desk_ip;
 		config.desk.port = req.body.desk_port;
 
-		config.external = [];
+		config.externalDevices = [];
 		if(req.body.externalName)
 		{
 			for(let x = 0; x<req.body.externalName.length; x++)
 			{
-				config.external.push({
+				config.externalDevices.push({
 					broadcast: req.body.externalBroadcast[x] == "true",
 					name: req.body.externalName[x],
 					ip: req.body.externalIP[x],
@@ -252,47 +250,29 @@ function startServer()
 			}
 		}
 
-		if(req.body.auxEnabled && req.body.auxColour && req.body.auxIcon)
-		{
-			let auxConfig = [];
-			for(const [index, value] of req.body.auxEnabled.entries())
-			{
-				addToObject(auxConfig, index, "enabled", value == "true");
-			}
-			for(const [index, value] of req.body.auxColour.entries())
-			{
-				addToObject(auxConfig, index, "colour", value);
-			}
-			for(const [index, value] of req.body.auxIcon.entries())
-			{
-				addToObject(auxConfig, index, "icon", value);
-			}
-			config.auxilaries = auxConfig;
+		if (req.body.auxEnabled && req.body.auxColour && req.body.auxIcon) {
+			const auxConfig = req.body.auxEnabled.map((enabledValue, index) => ({
+				enabled: enabledValue === "true",
+				colour: req.body.auxColour[index],
+				icon: req.body.auxIcon[index]
+			}));
+			currentState.auxes = auxConfig;
 		}
 
 		if(req.body.channelEnabled && req.body.channelOrder && req.body.channelIcon)
 		{
-			let channelConfig = [];
-			for(const [index, value] of req.body.channelEnabled.entries())
-			{
-				addToObject(channelConfig, index, "enabled", value == "true");
-			}
-			for(const [index, value] of req.body.channelOrder.entries())
-			{
-				addToObject(channelConfig, index, "order", parseInt(value));
-			}
-			for(const [index, value] of req.body.sectionTitle.entries())
-			{
-				addToObject(channelConfig, index, "title", value);
-			}
-			for(const [index, value] of req.body.channelIcon.entries())
-			{
-				addToObject(channelConfig, index, "icon", value);
-			}
-			config.channels = channelConfig;
+			const channelConfig = req.body.channelEnabled.map((enabledValue, index) => ({
+				enabled: enabledValue === "true",
+				displayOrder: parseInt(req.body.channelOrder[index]) || index,
+				title: req.body.sectionTitle ? req.body.sectionTitle[index] : "",
+				icon: req.body.channelIcon ? req.body.channelIcon[index] : ""
+			}))
+			currentState.channels = channelConfig;
 		}
 
-		writeConfig();
+		logger.info("Configuration updated via web interface. Saving current configuration state to disk.")
+		configManager.saveGlobalConfig(config);
+		configManager.saveCurrentState(currentState);
 
 		if(req.body.auxName)
 		{
@@ -343,7 +323,7 @@ function startServer()
 		}
 
 		//force webmixer client and admin connections to reload
-		closeAllConnections();
+		closeAllWebsocketConnections();
 
 		if(oscPortChanged)
 		{
@@ -353,16 +333,21 @@ function startServer()
 
 		if(portChanged)
 		{
-			//close web socket server
-			wss.close();
+			closeAllWebsocketConnections();
+
+			//close web socket server if it is running
+			if(wss)
+			{
+				wss.close();
+			}
 
 			//close web server
 			server.close();
 
-			logger.warn(`Server port has changed. Please visit http://${getServerURL()} to continue.`);
+			logger.warn(`Server port has changed. Please visit ${getServerURL()} to continue.`);
 
 			//respond with redirection to the new port
-			res.send(`<script>document.location.href="http://${getServerURL()}/admin";</script>`);
+			res.send(`<script>document.location.href="${getServerURL()}/admin";</script>`);
 
 			startServer();
 			return;
@@ -386,6 +371,130 @@ function startServer()
 		res.json(config);
 	});
 
+	app.get('/api/presets', (req, res) => {
+		let presets = configManager.getPresets()
+
+		res.json(presets.map(p => ({
+			uuid: p.uuid,
+			name: p.name,
+			lastChanged: p.lastChanged
+		})));
+	});
+
+	app.post('/api/presets/:uuid/load', (req, res) => {
+		try {
+			const { uuid } = req.params;
+
+			if (!uuid) {
+				return res.status(400).json({
+					success: false,
+					message: "Preset UUID is required."
+				});
+			}
+
+			const preset = configManager.getPresetById(uuid);
+
+			if (!preset) {
+				return res.status(404).json({
+					success: false,
+					message: `Preset with ID "${uuid}" not found.`
+				});
+			}
+
+			currentState = structuredClone(preset)
+			configManager.saveCurrentState(currentState);
+			closeAllWebsocketConnections();
+
+			res.json({
+				success: true,
+				message: `Preset "${preset.name}" loaded successfully.`,
+				state: currentState
+			});
+		} catch (err) {
+			logger.error(`Error loading preset: ${err}`);
+			res.status(500).json({
+				success: false,
+				message: "An internal server error occurred."
+			});
+		}
+	});
+
+	app.post('/api/presets/save-current-state', (req, res) => {
+		try {
+			const { name } = req.body;
+
+			if (!name || name.trim() === "") {
+				return res.status(400).json({ success: false, message: "Preset name is required." });
+			}
+
+			const newPreset = configManager.saveCurrentStateAsPreset(currentState, name);
+
+			res.status(201).json({
+				success: true,
+				message: "Preset saved successfully.",
+				preset: newPreset
+			});
+		} catch (err) {
+			if (err.code === 'PRESET_EXISTS') {
+				return res.status(409).json({
+					success: false,
+					message: err.message
+				});
+			}
+
+			logger.error(`Error saving preset: ${err}`);
+			res.status(500).json({
+				success: false,
+				message: "An internal server error occurred."
+			});
+		}
+	});
+
+	app.delete('/api/presets/:uuid', (req, res) => {
+		try {
+			const { uuid } = req.params;
+			configManager.deletePreset(uuid);
+
+			res.json({ 
+				success: true, 
+				message: "Preset deleted successfully." 
+			});
+
+		} catch (err) {
+			if (err.code === 'PRESET_NOT_FOUND') {
+				return res.status(404).json({ 
+					success: false, 
+					message: err.message 
+				});
+			}
+
+			logger.error("Error deleting preset:", err);
+			res.status(500).json({ 
+				success: false, 
+				message: "Failed to delete preset." 
+			});
+		}
+	});
+
+	app.get('/api/presets/:uuid/download', (req, res) => {
+		try {
+			const { uuid } = req.params;
+			const preset = configManager.getPresetById(uuid);
+
+			if (!preset) {
+				return res.status(404).json({ success: false, message: "Preset not found." });
+			}
+
+			const filename = `${preset.name.replace(/\s+/g, '_')}.json`;
+			res.setHeader('Content-Type', 'application/json');
+			res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+			res.send(JSON.stringify(preset, null, 4));
+		} catch (err) {
+			res.status(500).send("Error generating download.");
+		}
+	});
+
 	//provide the current config for the auxilaries
 	app.get('/aux', (req, res) => {
 		let auxDetails = [];
@@ -403,19 +512,19 @@ function startServer()
 				let enabled = true;
 				let colour = generateColour(auxModes.length, i);
 				let icon = "";
-				if(config.auxilaries && config.auxilaries[i])
+				if(currentState.auxes && currentState.auxes[i])
 				{
-					if(config.auxilaries[i].enabled != undefined)
+					if(currentState.auxes[i].enabled != undefined)
 					{
-						enabled = config.auxilaries[i].enabled;
+						enabled = currentState.auxes[i].enabled;
 					}
-					if(config.auxilaries[i].colour != undefined)
+					if(currentState.auxes[i].colour != undefined)
 					{
-						colour = config.auxilaries[i].colour;
+						colour = currentState.auxes[i].colour;
 					}
-					if(config.auxilaries[i].icon != undefined)
+					if(currentState.auxes[i].icon != undefined)
 					{
-						icon = config.auxilaries[i].icon;
+						icon = currentState.auxes[i].icon;
 					}
 				}
 				auxDetails.push({
@@ -446,23 +555,23 @@ function startServer()
 				let order = i + 1;
 				let title = "";
 				let icon = "";
-				if(config.channels && config.channels[i])
+				if(currentState.channels && currentState.channels[i])
 				{
-					if(config.channels[i].enabled != undefined)
+					if(currentState.channels[i].enabled != undefined)
 					{
-						enabled = config.channels[i].enabled;
+						enabled = currentState.channels[i].enabled;
 					}
-					if(config.channels[i].order != undefined)
+					if(currentState.channels[i].displayOrder != undefined)
 					{
-						order = config.channels[i].order;
+						order = currentState.channels[i].displayOrder;
 					}
-					if(config.channels[i].title != undefined)
+					if(currentState.channels[i].title != undefined)
 					{
-						title = config.channels[i].title;
+						title = currentState.channels[i].title;
 					}
-					if(config.channels[i].icon != undefined)
+					if(currentState.channels[i].icon != undefined)
 					{
-						icon = config.channels[i].icon;
+						icon = currentState.channels[i].icon;
 					}
 				}
 				channelDetails.push({
@@ -477,12 +586,7 @@ function startServer()
 		res.json(channelDetails);
 	});
 
-	//if this is the first time webmixer has been run
-	if(!fs.existsSync("config.json"))
-	{
-		logger.info(`Web Server Ready. Please visit ${getServerURL()}/admin in a web browser to set up OSC Web Mixer.`);
-		return;
-	}
+	logger.info(`Web Server Ready. Please visit ${getServerURL()}/admin in a web browser to configure OSC Web Mixer.`);
 }
 
 /**
@@ -499,8 +603,7 @@ function getServerURL()
 }
 
 function startWebSocketServer() {
-	// Create the web socket server (assigns the module-level `wss` so it can be
-	// closed later when the server port changes)
+	// Create the web socket server
 	wss = new webSocket.Server({
 		server: server
 	});
@@ -525,7 +628,14 @@ function startWebSocketServer() {
 			connections = connections.filter(function(c) { return c !== socket; });
 		});
 
-		logger.debug("New websockets connection")
+		//drop it from the list as soon as it closes, rather than waiting for the
+		//next broadcast to prune it
+		socket.on('close', function()
+		{
+			connections = connections.filter(function(c) { return c !== socket; });
+		});
+
+		logger.debug(`New WebSocket client connected. (Total: ${connections.length})`);
 
 		//send config for new connections
 		socket.send(buildConfig());
@@ -543,7 +653,7 @@ function startWebSocketServer() {
 				logger.warn("Ignoring malformed message from socket client: " + data);
 				return;
 			}
-			logger.debug("Message recieved from socket client: " + JSON.stringify(oscMsg));
+			logger.debug("Message recieved from websocket client: " + JSON.stringify(oscMsg));
 
 			//ignore messages that are already cached
 			if(cache.has(oscMsg.address) && JSON.stringify(cache.get(oscMsg.address)) == JSON.stringify(oscMsg))
@@ -570,6 +680,11 @@ function startWebSocketServer() {
 			maybeCacheResponse(oscMsg);
 
 			broadcast(oscMsg, this);
+		});
+
+		socket.on("close", function(code, reason) {
+			connections = connections.filter(conn => conn !== socket);
+			logger.debug(`Websocket client disconnected. (Total: ${connections.length})`);
 		});
 	});
 
@@ -604,7 +719,7 @@ function loadConfig()
 			fs.readFileSync("config.json", "utf-8")
 		)
 	}
-
+	
 	return {
 		debug: false,
 		server: {
@@ -660,7 +775,7 @@ function startOSC()
 		if(err.code == "EADDRINUSE" || err.code == "EACCES")
 		{
 			//can't receive OSC without this port - retrying is pointless, so fail loudly
-			if(spinner) spinner.fail("Could not open OSC port.");
+			logger.error("Could not open OSC port.");
 			logger.error(`OSC port ${config.osc.port} is ${err.code == "EACCES" ? "not permitted" : "already in use"}. ` +
 				`Close whatever is using it or change the OSC Receive Port in the admin area.`);
 			process.exit(1);
@@ -677,7 +792,7 @@ function startOSC()
 		{
 			cache.clear();
 			loaded = false;
-			closeAllConnections();
+			closeAllWebsocketConnections();
 			fetchValues();
 			return;
 		}
@@ -719,11 +834,11 @@ function startOSC()
 	udpPort.on("ready", fetchValues);
 
 	udpPort.open();
-	spinner = logger.loading("Loading values from mixing desk...").start();
+	logger.info("Loading values from mixing desk...");
 }
 
 /**
- * Ha
+ * Handles Current Snapshot messages sent by the console
  * @param {object} oscMsg
  */
 function processSnapshotMsg(oscMsg)
@@ -784,7 +899,7 @@ function processSnapshotMsg(oscMsg)
 /**
  * Close all webmixer connections
  */
-function closeAllConnections()
+function closeAllWebsocketConnections()
 {
 	for(let connection of connections)
 	{
@@ -809,9 +924,9 @@ function broadcast(oscMsg, source)
 	}
 
 	//notify all external devices
-	if(config.external)
+	if(config.externalDevices)
 	{
-		for(let external of config.external)
+		for(let external of config.externalDevices)
 		{
 			if(external.broadcast && (external.loopback || external.ip != source))
 			{
@@ -857,12 +972,12 @@ function stopOSC()
 function maybeCacheResponse(msg)
 {
 	let matchAddresses = [
-		/^\/Console\/Input_Channels$/, //cache total number of channels
+		/^\/Input_Channels\/(\d{1,3})\/Aux_Send\/(\d{1,3})\/send_level$/, //cache channel aux level
+		/^\/Input_Channels\/(\d{1,3})\/Aux_Send\/(\d{1,3})\/send_pan$/, //cache channel aux pan
+		/^\/Input_Channels\/(\d{1,3})\/Channel_Input\/name$/, //cache channel name
 		/^\/Aux_Outputs\/([0-9]+)\/Buss_Trim\/name$/, //cache aux name
 		/^\/Console\/Aux_Outputs\/modes$/, //cache aux modes (stereo or mono)
-		/^\/Input_Channels\/([0-9]+)\/Channel_Input\/name$/, //cache channel name
-		/^\/Input_Channels\/([0-9]+)\/Aux_Send\/([0-9]+)\/send_level$/, //cache channel aux level
-		/^\/Input_Channels\/([0-9]+)\/Aux_Send\/([0-9]+)\/send_pan$/ //cache channel aux pan
+		/^\/Console\/Input_Channels$/ //cache total number of channels
 	];
 
 	for(let address of matchAddresses)
@@ -923,7 +1038,7 @@ function loadNextRequiredParameter()
 	cachePrimeInterval = setInterval(primeCache, 100);
 
 	loaded = true;
-	spinner.succeed("Loaded values from mixing desk.");
+	logger.info("Loaded values from mixing desk.");
 
 	startWebSocketServer();
 	logger.info("Webmixer ready to use.");
@@ -941,18 +1056,18 @@ function primeCache()
 	logger.debug("Priming Cache");
 
 	//request all aux level and pan values if they have been saved in config
-	if(config.channels && config.auxilaries)
+	if(currentState.channels && currentState.auxes)
 	{
-		for(let aux=0; aux<config.auxilaries.length; aux++)
+		for(let aux=0; aux<currentState.auxes.length; aux++)
 		{
-			if(!config.auxilaries[aux].enabled)
+			if(!currentState.auxes[aux].enabled)
 			{
 				continue;
 			}
 
-			for(let channel=0; channel<config.channels.length; channel++)
+			for(let channel=0; channel<currentState.channels.length; channel++)
 			{
-				if(!config.channels[channel].enabled)
+				if(!currentState.channels[channel].enabled)
 				{
 					continue;
 				}
@@ -985,9 +1100,9 @@ function primeCache()
  */
 function sendUDP(name, msg)
 {
-	if(config.external)
+	if(config.externalDevices)
 	{
-		for(let external of config.external)
+		for(let external of config.externalDevices)
 		{
 			if(external.name == name)
 			{
@@ -1016,7 +1131,7 @@ function processPlugins(oscMsg)
 		{
 			oscMsg = response;
 		}
-	};
+	}
 	return oscMsg;
 }
 
