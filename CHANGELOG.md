@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.0 — 2026-11-01
+
+Windows product version: **1.3.0**. Node package version: **2.6.0**.
+
+- Desk settings channels use a compact two-column layout with drag and keyboard reordering while preserving each channel's settings.
+- Reusable text tabs show an animated active underline on a full-width baseline. Admin page content no longer sits inside cards.
+- The admin sidebar collapses to icons and remembers the preference. Its footer displays the running release version beside the collapse control.
+- Removed the disconnected clients section, sidebar subtitle and back-to-mixer link.
+
 ## 1.2.2 — 2026-11-01
 
 Windows product version: **1.2.2**. Node package version: **2.6.0**.
