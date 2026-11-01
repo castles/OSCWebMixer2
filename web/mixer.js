@@ -151,7 +151,8 @@ function updateLevel(slider, level, db = null) {
   const value = valid ? Math.max(0, Math.min(1, level)) : (panMode ? 0.5 : 0);
   slider.value = String(value);
   slider.style.setProperty("--value", value * 100 + "%");
-  const readout = channelElements.get(slider.dataset.channel).readout;
+  const { readout, thumb } = channelElements.get(slider.dataset.channel);
+  thumb.style.setProperty("--value", value * 100 + "%");
   if (panMode) {
     const offset = Math.round(Math.abs(value * 2 - 1) * 100);
     const position = offset === 0 ? "C" : (value < 0.5 ? "L " : "R ") + offset;
@@ -189,6 +190,7 @@ zeroAllChannelsButton.addEventListener("click", () => {
 function clearPendingWrites() {
   for (const pending of pendingWrites.values()) clearTimeout(pending.timer);
   pendingWrites.clear();
+  for (const { cancelDrag } of channelElements.values()) cancelDrag();
 }
 
 function flushSlider(slider) {
@@ -209,6 +211,58 @@ function sliderChange() {
   pending = { aux: auxSelect.value, parameter: sendParameter(), value, timer: null };
   pendingWrites.set(this.dataset.channel, pending);
   pending.timer = setTimeout(() => flushSlider(this), WRITE_INTERVAL_MS);
+}
+
+function bindFaderHandle(slider, thumb) {
+  let drag = null;
+  function cancelDrag() {
+    if (!drag) return;
+    const pointerId = drag.pointerId;
+    drag = null;
+    thumb.classList.toggle("dragging", false);
+    const pending = pendingWrites.get(slider.dataset.channel);
+    if (pending) clearTimeout(pending.timer);
+    pendingWrites.delete(slider.dataset.channel);
+    if (thumb.hasPointerCapture(pointerId)) thumb.releasePointerCapture(pointerId);
+  }
+  thumb.addEventListener("pointerdown", event => {
+    if (drag || event.button !== 0 || slider.disabled) return;
+    const travel = slider.getBoundingClientRect().width - thumb.getBoundingClientRect().width;
+    if (travel <= 0) return;
+    // Preserve the grab offset: touching either edge of the handle must not jump.
+    drag = { pointerId: event.pointerId, x: event.clientX, value: Number(slider.value),
+      travel, aux: auxSelect.value, parameter: sendParameter(), moved: false };
+    event.preventDefault();
+    slider.focus({ preventScroll: true });
+    thumb.setPointerCapture(event.pointerId);
+    thumb.classList.toggle("dragging", true);
+  });
+  function move(event) {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    if (slider.disabled || drag.aux !== auxSelect.value || drag.parameter !== sendParameter()) {
+      cancelDrag();
+      return;
+    }
+    const delta = event.clientX - drag.x;
+    // Ignore the small finger movement that can accompany a tap.
+    if (!drag.moved && Math.abs(delta) < 3) return;
+    drag.moved = true;
+    const previous = slider.value;
+    slider.value = String(Math.max(0, Math.min(1, drag.value + delta / drag.travel)));
+    if (slider.value !== previous) slider.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  thumb.addEventListener("pointermove", move);
+  thumb.addEventListener("pointerup", event => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    move(event);
+    flushSlider(slider);
+    cancelDrag();
+  });
+  for (const type of ["pointercancel", "lostpointercapture"]) thumb.addEventListener(type, event => {
+    if (drag?.pointerId === event.pointerId) cancelDrag();
+  });
+  slider.addEventListener("blur", cancelDrag);
+  return cancelDrag;
 }
 
 function requestValues({ preserveValues = false } = {}) {
@@ -348,7 +402,7 @@ function buildChannels(channels) {
     const row = document.createElement("div");
     row.className = "channel-card";
     row.dataset.channel = String(channel.channel);
-    row.innerHTML = '<button type="button" class="drag-handle" title="Drag to reorder">' + appIcon("gripVertical") + '</button><div class="channel-header"><span class="channel-name"></span><input class="fader volumeInput" type="range" min="0" max="1" step="0.001" value="0" disabled><output class="level-readout">—</output><label class="favourite"><input type="checkbox" name="fav[]">' + appIcon("star") + '</label></div>';
+    row.innerHTML = '<button type="button" class="drag-handle" title="Drag to reorder">' + appIcon("gripVertical") + '</button><div class="channel-header"><span class="channel-name"></span><div class="fader-control"><input class="fader volumeInput" type="range" min="0" max="1" step="0.001" value="0" disabled><span class="fader-thumb" aria-hidden="true"></span></div><output class="level-readout">—</output><label class="favourite"><input type="checkbox" name="fav[]">' + appIcon("star") + '</label></div>';
     const name = channel.label || "Channel " + channel.channel;
     row.querySelector(".channel-name").textContent = name;
     row.querySelector(".channel-name").title = name;
@@ -357,14 +411,16 @@ function buildChannels(channels) {
     slider.dataset.ready = "false";
     slider.setAttribute("aria-label", name + (panMode ? " send pan" : " send level"));
     slider.addEventListener("input", sliderChange);
-    for (const event of ["change", "pointerup", "pointercancel", "keyup", "blur"]) slider.addEventListener(event, () => flushSlider(slider));
+    const thumb = row.querySelector(".fader-thumb");
+    const cancelDrag = bindFaderHandle(slider, thumb);
+    for (const event of ["change", "keyup", "blur"]) slider.addEventListener(event, () => flushSlider(slider));
     const checkbox = row.querySelector('input[name="fav[]"]');
     checkbox.value = String(channel.channel);
     checkbox.setAttribute("aria-label", "Favourite " + name);
     const handle = row.querySelector(".drag-handle");
     handle.setAttribute("aria-label", "Move " + name);
     handle.addEventListener("keydown", moveChannelWithKeys);
-    channelElements.set(String(channel.channel), { row, slider, checkbox, handle, name: row.querySelector(".channel-name"), readout: row.querySelector(".level-readout") });
+    channelElements.set(String(channel.channel), { row, slider, thumb, cancelDrag, checkbox, handle, name: row.querySelector(".channel-name"), readout: row.querySelector(".level-readout") });
     channelsDiv.appendChild(row);
   }
   restoreChannelOrder();

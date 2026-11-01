@@ -27,7 +27,7 @@ class Control {
   }
   set innerHTML(markup) {
     if (!markup.includes("channel-header")) return;
-    this.controls = new Map([".channel-name", ".volumeInput", ".level-readout", ".drag-handle", 'input[name="fav[]"]'].map(selector => [selector, new Control()]));
+    this.controls = new Map([".channel-name", ".volumeInput", ".fader-thumb", ".level-readout", ".drag-handle", 'input[name="fav[]"]'].map(selector => [selector, new Control()]));
   }
   querySelector(selector) { return this.controls?.get(selector) || null; }
   querySelectorAll(selector) {
@@ -52,6 +52,10 @@ class Control {
   }
   dispatchEvent(event) { for (const listener of this.listeners.get(event.type) || []) listener.call(this, event); }
   focus() {}
+  getBoundingClientRect() { return { width: 228 }; }
+  setPointerCapture(id) { this.pointerId = id; }
+  hasPointerCapture(id) { return this.pointerId === id; }
+  releasePointerCapture() { this.pointerId = null; }
 }
 
 function createMixer(source = mixerSource) {
@@ -217,7 +221,7 @@ test("slider readouts display native dB, off and local drag values", () => {
   }
 });
 
-test("slider traffic is coalesced and release flushes the final value immediately", () => {
+test("slider traffic is coalesced and a native commit flushes the final value immediately", () => {
   const mixer = createMixer();
   mixer.level(65, 2, 0);
   const slider = mixer.slider(65);
@@ -228,7 +232,7 @@ test("slider traffic is coalesced and release flushes the final value immediatel
   assert.equal(mixer.writes().length, 1);
   assert.equal(mixer.writes()[0].address, "/Input_Channels/65/Aux_Send/2/send_level");
   assert.ok(Math.abs(mixer.writes()[0].args[0] - mixer.run("sliderToDb(0.4)")) < 1e-8);
-  slider.value = "1"; slider.dispatchEvent({ type: "input" }); slider.dispatchEvent({ type: "pointerup" });
+  slider.value = "1"; slider.dispatchEvent({ type: "input" }); slider.dispatchEvent({ type: "change" });
   assert.equal(mixer.writes().length, 2);
   assert.equal(mixer.writes()[1].args[0], 10);
   mixer.tick(100);
@@ -360,4 +364,77 @@ for (const [name, source] of [["source", mixerSource], ["production", fs.readFil
     assert.equal(slider.disabled, true);
     assert.equal(mixer.socket().sent.filter(m => m.address?.endsWith("/send_pan")).length, 0);
   });
+
+  function faderPointer(mixer, id = 2) {
+    const thumb = mixer.run('channelElements.get("' + id + '").thumb');
+    thumb.getBoundingClientRect = () => ({ width: 28 });
+    return (type, x, pointerId = 1, button = 0) => thumb.dispatchEvent({ type, clientX: x, pointerId, button, preventDefault() {} });
+  }
+
+  test(name + " handle taps do not write; dragging preserves the grab offset and flushes on release", () => {
+    const mixer = createMixer(source);
+    mixer.level(2, 2, -20);
+    const slider = mixer.slider(2);
+    const initial = Number(slider.value);
+    const pointer = faderPointer(mixer);
+    pointer("pointerdown", 100);
+    pointer("pointermove", 102);
+    pointer("pointerup", 102);
+    mixer.tick(100);
+    assert.equal(Number(slider.value), initial, "tapping or finger jitter must not change a level");
+    assert.equal(mixer.writes().length, 0);
+
+    pointer("pointerdown", 100);
+    pointer("pointermove", 160, 2);
+    assert.equal(Number(slider.value), initial, "another finger cannot move this drag");
+    pointer("pointermove", 150);
+    assert.ok(Math.abs(Number(slider.value) - initial - 0.25) < 1e-8);
+    assert.equal(mixer.writes().length, 0);
+    pointer("pointerup", 150);
+    assert.equal(mixer.writes().length, 1);
+    assert.ok(Math.abs(mixer.writes()[0].args[0] - mixer.run(`sliderToDb(${initial + 0.25})`)) < 1e-8);
+    pointer("pointermove", 180);
+    mixer.tick(100);
+    assert.equal(mixer.writes().length, 1, "a released drag cannot keep writing");
+  });
+
+  test(name + " handle drags clamp at both ends and ignore disabled or secondary-button input", () => {
+    const mixer = createMixer(source);
+    const pointer = faderPointer(mixer);
+    pointer("pointerdown", 100); pointer("pointermove", 500); pointer("pointerup", 500);
+    assert.equal(mixer.writes().length, 0);
+    mixer.level(2, 2, -20);
+    const initial = mixer.slider(2).value;
+    pointer("pointerdown", 100, 1, 2); pointer("pointermove", 500); pointer("pointerup", 500);
+    assert.equal(mixer.slider(2).value, initial);
+    pointer("pointerdown", 100); pointer("pointerup", 500);
+    assert.equal(mixer.writes().at(-1).args[0], 10);
+    pointer("pointerdown", 100); pointer("pointerup", -500);
+    assert.equal(mixer.writes().at(-1).args[0], -150);
+  });
+
+  for (const reason of ["pointercancel", "lostpointercapture", "aux", "pan", "reload", "disconnect", "layout"]) {
+    test(name + " cancels active handle drags and queued writes on " + reason, () => {
+      const mixer = createMixer(source);
+      mixer.level(2, 2, -20);
+      const pointer = faderPointer(mixer);
+      pointer("pointerdown", 100); pointer("pointermove", 150);
+      if (reason === "aux") {
+        const aux = mixer.controls.get("aux"); aux.value = "4"; aux.dispatchEvent({ type: "change" });
+        mixer.level(2, 4, -12);
+      } else if (reason === "pan") {
+        mixer.controls.get("panMode").dispatchEvent({ type: "click" });
+        mixer.message({ address: "/Input_Channels/2/Aux_Send/2/send_pan", args: [0.5] });
+      } else if (reason === "reload") {
+        mixer.message({ address: "/MixReload", args: [] }); mixer.level(2, 2, -12);
+      } else if (reason === "disconnect") mixer.socket().close();
+      else if (reason === "layout") mixer.run("setEditingLayout(true); setEditingLayout(false)");
+      else pointer(reason, 150);
+      const value = mixer.slider(2).value;
+      pointer("pointermove", 190); pointer("pointerup", 190);
+      mixer.tick(100);
+      assert.equal(mixer.slider(2).value, value, "a cancelled gesture must not resume after reloading");
+      assert.equal(mixer.socket().sent.filter(m => /\/send_(level|pan)$/.test(m.address || "")).length, 0);
+    });
+  }
 }

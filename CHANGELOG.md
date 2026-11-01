@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.2 — 2026-11-01
+
+Windows product version: **1.2.2**. Node package version: **2.6.0**.
+
+- Fader levels and send pan now require dragging the handle when using a finger, mouse or pen. Tapping or swiping the track leaves the value unchanged and allows vertical scrolling.
+- Grabbing the handle preserves the current value without jumping to the contact point. Active drags are cancelled when changing mixes or modes, reloading a snapshot, editing the layout or disconnecting.
+- Keyboard and assistive-technology slider controls remain available.
+
 ## 1.2.1 — 2026-10-16
 
 Windows product version: **1.2.1**. Node package version: **2.6.0**.

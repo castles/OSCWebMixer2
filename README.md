@@ -52,6 +52,8 @@ The service is named **EarsMixer** in Windows Services. It starts automatically 
 
 Musicians can choose list or grid views, reorder channels, save favourites and use compact or fullscreen controls. Layout preferences are saved per AUX on each browser/device.
 
+To adjust a fader with a finger, mouse or pen, drag its handle. Tapping or swiping the fader track does not change the level, so you can scroll through the channels without jumping a fader. Keyboard and assistive-technology controls remain available.
+
 **Phone mixer** — compact mode keeps channel names, faders and favourites on one row, with the controls menu in the bottom-left corner:
 
 <img src="docs/screenshots/mixer-phone.jpg" alt="EarsMixer in compact mode at phone size, with channel names, faders and favourites on one row" width="320">
