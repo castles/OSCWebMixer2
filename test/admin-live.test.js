@@ -40,7 +40,7 @@ class Element {
 }
 
 function snapshot() {
-  return { loaded: true, url: "http://localhost/", connections: 1, aux: [
+  return { version: "1.10.2", loaded: true, url: "http://localhost/", connections: 1, aux: [
     { channel: 1, label: "Drums", stereo: true }, { channel: 2, label: "Bass" },
   ], channels: [{ channel: 1, label: "Click" }, { channel: 2, label: "Vox" }], mixLevels: {
     1: [{ channel: 1, label: "Click", level: 0.3, pan: 0 }, { channel: 2, label: "Vox", level: null, pan: null }],
@@ -88,6 +88,8 @@ async function createAdmin() {
 
 test("admin observer applies live levels and pan in place before any status poll", async () => {
   const admin = await createAdmin();
+  assert.equal(admin.control("appVersion").textContent, "v1.10.2");
+  assert.equal(admin.control("appVersion").title, "EarsMixer v1.10.2");
   const socket = admin.sockets[0];
   assert.equal(socket.url, "ws://localhost/?role=observer");
   const row = admin.control("liveMixChannels").rows[0];

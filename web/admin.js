@@ -559,6 +559,10 @@ function renderMixerConnection(data) {
 }
 
 function renderStatus(data, updateMixerUrl = true) {
+  const version = document.getElementById("appVersion");
+  version.hidden = typeof data.version !== "string" || !data.version;
+  version.textContent = version.hidden ? "" : "v" + data.version;
+  version.title = version.hidden ? "" : "EarsMixer " + version.textContent;
   deskReady = !!data.loaded;
   loadingEl.hidden = true;
   errorEl.hidden = true;

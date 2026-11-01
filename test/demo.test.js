@@ -13,6 +13,7 @@ const WebSocket = require("ws");
 const osc = require("osc");
 const QRCode = require("qrcode");
 const { getMainIPAddress } = require("../lib/utils/utils.js");
+const { productVersion } = require("../lib/product-info.js");
 
 async function availablePort(udp = false) {
   const socket = udp ? dgram.createSocket("udp4") : net.createServer();
@@ -134,6 +135,7 @@ test("offline v2: discovery, scoped clients, dashboard, templates, admin session
     assert.equal(dashboard.connections, 3, "observer sockets must not appear as mixer clients");
     assert.equal(new Set(dashboard.clients.map(client => client.id)).size, 3);
     assert.equal(dashboard.loaded, true);
+    assert.equal(dashboard.version, productVersion());
     assert.equal(dashboard.url, publicBase + "/");
     assert.match(dashboard.qr, /^data:image\/png;base64,/);
     assert.equal(dashboard.channels.length, 20);

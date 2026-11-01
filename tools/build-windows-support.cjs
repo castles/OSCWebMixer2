@@ -4,6 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { createHash } = require("node:crypto");
 const { spawnSync } = require("node:child_process");
+const { productVersion } = require("../lib/product-info.js");
 const root = path.resolve(__dirname, "..");
 const output = path.join(root, "dist", "windows");
 const winSWVersion = "2.12.0";
@@ -17,11 +18,7 @@ async function download(url) {
 }
 
 function productInfoSource(metadata = fs.readFileSync(path.join(root, "installer", "version.inc.iss"), "utf8")) {
-    const match = metadata.match(/^#define[ \t]+AppVersion[ \t]+"((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*))"[ \t]*\r?$/m);
-    if (!match || match[1].split(".").some(part => Number(part) > 65534)) {
-        throw new Error("AppVersion must be major.minor.patch with components between 0 and 65534.");
-    }
-    const version = match[1];
+    const version = productVersion(metadata);
     return `// Generated from installer/version.inc.iss.\n` +
         `[assembly: System.Reflection.AssemblyVersion("${version}.0")]\n` +
         `[assembly: System.Reflection.AssemblyFileVersion("${version}.0")]\n` +

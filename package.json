@@ -49,6 +49,7 @@
             "index.js"
         ],
         "assets": [
+            "installer/version.inc.iss",
             "web/**/*"
         ],
         "ignore": [

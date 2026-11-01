@@ -14,6 +14,8 @@ const { createAdminAuth } = require('./lib/admin-session.js');
 const { useTemplateRoutes, deviceUsername } = require('./lib/templates.js');
 const { dbToSlider, panToCentered, colourToRGB } = require('./lib/mix-values.js');
 const { QueryQueue } = require('./lib/query-queue.js');
+const { productVersion } = require('./lib/product-info.js');
+const appVersion = productVersion();
 const { normalizeMixerUrl } = require('./lib/mixer-url.js');
 let adminAuth;
 let discoveryTimer = null;
@@ -218,7 +220,7 @@ function startServer()
 		const connection = await getConnectionInfo();
 		res.json({
 			...connection, customMixerUrl: config.server.publicUrl || "", loaded, snapshot: currentSnapshotName,
-			connections: clients.length, authEnabled: false,
+			version: appVersion, connections: clients.length, authEnabled: false,
 			adminPasswordEnabled: adminAuth.isEnabled(),
 			clients: clients.map(socket => serializeClient(socket, null, mix)), disconnectedClients,
 			aux: mix.aux.map(aux => ({ ...aux, colour: colourToRGB(aux.colour) })),

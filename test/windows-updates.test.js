@@ -7,10 +7,13 @@ const os = require("node:os");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 const { productInfoSource } = require("../tools/build-windows-support.cjs");
+const { productVersion } = require("../lib/product-info.js");
 
 test("Windows tray version comes from installer metadata, independently of the Node package", () => {
   const metadata = fs.readFileSync(path.join(__dirname, "../installer/version.inc.iss"), "utf8");
   const version = metadata.match(/^#define AppVersion "([\d.]+)"/m)[1];
+  assert.equal(productVersion(), version);
+  assert(require("../package.json").pkg.assets.includes("installer/version.inc.iss"), "packaged apps must include their version metadata");
   const source = productInfoSource();
   assert(source.includes(`const string Version = "${version}"`));
   assert(source.includes(`AssemblyVersion("${version}.0")`));

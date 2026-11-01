@@ -14,11 +14,7 @@
     <div class="admin-shell">
       <aside class="sidebar" id="adminSidebar" aria-label="Admin navigation">
         <div class="sidebar-brand">
-          <div class="sidebar-brand-row">
-            <div class="admin-brand"><img src="/images/Glow_Logo_2026.svg" alt="Glow"><span>EarsMixer</span></div>
-            <button type="button" class="sidebar-collapse" id="sidebarCollapse" aria-label="Collapse sidebar" aria-controls="sidebarNav" aria-expanded="true" title="Collapse sidebar"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#chevronRight"></use></svg></button>
-          </div>
-          <small>Admin dashboard</small>
+          <div class="admin-brand"><img src="/images/Glow_Logo_2026.svg" alt="Glow"><span>EarsMixer</span></div>
         </div>
 
         <nav class="sidebar-nav" id="sidebarNav">
@@ -38,7 +34,10 @@
           </button>
         </nav>
 
-        <a class="sidebar-footer" href="/" aria-label="Back to mixer" title="Back to mixer"><svg class="app-icon" aria-hidden="true" focusable="false"><use href="vendor/lucide.svg#arrowLeft"></use></svg><span class="nav-label">Back to mixer</span></a>
+        <footer class="sidebar-footer">
+          <span class="sidebar-version" id="appVersion" hidden></span>
+          <button type="button" class="sidebar-collapse" id="sidebarCollapse" aria-label="Collapse sidebar" aria-controls="sidebarNav" aria-expanded="true" title="Collapse sidebar"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#chevronRight"></use></svg></button>
+        </footer>
       </aside>
 
       <div class="admin-main">
