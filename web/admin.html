@@ -12,30 +12,33 @@
   </head>
   <body>
     <div class="admin-shell">
-      <aside class="sidebar">
+      <aside class="sidebar" id="adminSidebar" aria-label="Admin navigation">
         <div class="sidebar-brand">
-          <div class="admin-brand"><img src="/images/Glow_Logo_2026.svg" alt="Glow"><span>EarsMixer</span></div>
+          <div class="sidebar-brand-row">
+            <div class="admin-brand"><img src="/images/Glow_Logo_2026.svg" alt="Glow"><span>EarsMixer</span></div>
+            <button type="button" class="sidebar-collapse" id="sidebarCollapse" aria-label="Collapse sidebar" aria-controls="sidebarNav" aria-expanded="true" title="Collapse sidebar"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#chevronRight"></use></svg></button>
+          </div>
           <small>Admin dashboard</small>
         </div>
 
         <nav class="sidebar-nav" id="sidebarNav">
-          <button type="button" class="nav-item active" data-page="overview">
-            <svg class="app-icon" aria-hidden="true" focusable="false"><use href="vendor/lucide.svg#layoutDashboard"></use></svg> Overview
+          <button type="button" class="nav-item active" data-page="overview" aria-label="Overview" title="Overview">
+            <svg class="app-icon" aria-hidden="true" focusable="false"><use href="vendor/lucide.svg#layoutDashboard"></use></svg><span class="nav-label">Overview</span>
           </button>
-          <button type="button" class="nav-item" data-page="live-mix">
-            <svg class="app-icon" aria-hidden="true" focusable="false"><use href="vendor/lucide.svg#slidersHorizontal"></use></svg> Live mix
+          <button type="button" class="nav-item" data-page="live-mix" aria-label="Live mix" title="Live mix">
+            <svg class="app-icon" aria-hidden="true" focusable="false"><use href="vendor/lucide.svg#slidersHorizontal"></use></svg><span class="nav-label">Live mix</span>
           </button>
-          <button type="button" class="nav-item" data-page="clients">
-            <svg class="app-icon" aria-hidden="true" focusable="false"><use href="vendor/lucide.svg#users"></use></svg> Clients
+          <button type="button" class="nav-item" data-page="clients" aria-label="Clients" title="Clients">
+            <svg class="app-icon" aria-hidden="true" focusable="false"><use href="vendor/lucide.svg#users"></use></svg><span class="nav-label">Clients</span>
           </button>
-          <button type="button" class="nav-item" data-page="templates"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#layoutDashboard"></use></svg> Templates</button>
-          <button type="button" class="nav-item" data-page="desk-settings"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#slidersHorizontal"></use></svg> Desk settings</button>
-          <button type="button" class="nav-item" data-page="config">
-            <svg class="app-icon" aria-hidden="true" focusable="false"><use href="vendor/lucide.svg#settings"></use></svg> Config
+          <button type="button" class="nav-item" data-page="templates" aria-label="Templates" title="Templates"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#layoutDashboard"></use></svg><span class="nav-label">Templates</span></button>
+          <button type="button" class="nav-item" data-page="desk-settings" aria-label="Desk settings" title="Desk settings"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#slidersHorizontal"></use></svg><span class="nav-label">Desk settings</span></button>
+          <button type="button" class="nav-item" data-page="config" aria-label="Config" title="Config">
+            <svg class="app-icon" aria-hidden="true" focusable="false"><use href="vendor/lucide.svg#settings"></use></svg><span class="nav-label">Config</span>
           </button>
         </nav>
 
-        <a class="sidebar-footer" href="/"><svg class="app-icon" aria-hidden="true" focusable="false"><use href="vendor/lucide.svg#arrowLeft"></use></svg> Back to mixer</a>
+        <a class="sidebar-footer" href="/" aria-label="Back to mixer" title="Back to mixer"><svg class="app-icon" aria-hidden="true" focusable="false"><use href="vendor/lucide.svg#arrowLeft"></use></svg><span class="nav-label">Back to mixer</span></a>
       </aside>
 
       <div class="admin-main">
@@ -45,6 +48,8 @@
             class="sidebar-toggle"
             id="sidebarToggle"
             aria-label="Toggle navigation"
+            aria-controls="adminSidebar"
+            aria-expanded="false"
           >
             <svg class="app-icon" aria-hidden="true" focusable="false"><use href="vendor/lucide.svg#menu"></use></svg> Menu
           </button>

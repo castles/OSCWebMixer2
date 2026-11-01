@@ -28,6 +28,24 @@ const panToggleEl = document.getElementById("panToggle");
 const panToggleLabelEl = document.getElementById("panToggleLabel");
 const sidebarNavEl = document.getElementById("sidebarNav");
 const sidebarToggleEl = document.getElementById("sidebarToggle");
+const sidebarCollapseEl = document.getElementById("sidebarCollapse");
+let sidebarCollapsed = false;
+try { sidebarCollapsed = localStorage.getItem("adminSidebarCollapsed") === "true"; } catch { /* Navigation still works without storage. */ }
+
+function setSidebarCollapsed(collapsed) {
+  sidebarCollapsed = collapsed;
+  document.body.classList.toggle("sidebar-collapsed", collapsed);
+  sidebarCollapseEl.setAttribute("aria-expanded", String(!collapsed));
+  const label = collapsed ? "Expand sidebar" : "Collapse sidebar";
+  sidebarCollapseEl.setAttribute("aria-label", label);
+  sidebarCollapseEl.setAttribute("title", label);
+}
+setSidebarCollapsed(sidebarCollapsed);
+sidebarCollapseEl.addEventListener("click", () => {
+  document.body.classList.add("sidebar-animated");
+  setSidebarCollapsed(!sidebarCollapsed);
+  try { localStorage.setItem("adminSidebarCollapsed", String(sidebarCollapsed)); } catch { /* The toggle works without persistence. */ }
+});
 const pageTitleEl = document.getElementById("pageTitle");
 const pageEls = document.querySelectorAll(".page");
 const navItemEls = document.querySelectorAll(".nav-item");
@@ -701,6 +719,7 @@ sidebarToggleEl.addEventListener("click", () => {
   document.getElementById("sidebarBackdrop").hidden = !open;
   sidebarToggleEl.setAttribute("aria-expanded", String(open));
 });
+window.addEventListener("resize", () => { if (window.innerWidth > 768) closeAdminNavigation(); });
 
 window.addEventListener("hashchange", () => {
   const page = window.location.hash.replace("#", "");
