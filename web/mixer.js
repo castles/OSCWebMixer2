@@ -233,6 +233,7 @@ function bindFaderHandle(slider, thumb) {
     drag = { pointerId: event.pointerId, x: event.clientX, value: Number(slider.value),
       travel, aux: auxSelect.value, parameter: sendParameter(), moved: false };
     event.preventDefault();
+    slider.classList.toggle("pointer-focused", true);
     slider.focus({ preventScroll: true });
     thumb.setPointerCapture(event.pointerId);
     thumb.classList.toggle("dragging", true);
@@ -262,6 +263,7 @@ function bindFaderHandle(slider, thumb) {
     if (drag?.pointerId === event.pointerId) cancelDrag();
   });
   slider.addEventListener("blur", cancelDrag);
+  for (const type of ["keydown", "blur"]) slider.addEventListener(type, () => slider.classList.toggle("pointer-focused", false));
   return cancelDrag;
 }
 
