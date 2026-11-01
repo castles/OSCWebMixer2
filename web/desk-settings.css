@@ -1,8 +1,4 @@
 .desk-settings { overflow: visible; }
-.desk-settings-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0; border-bottom: 1px solid #39414e; padding-bottom: 12px; }
-.desk-settings-tabs button.selected { background: #344154; color: #fff; border-color: #6681a5; }
-.desk-settings #configForm > section { display: none; }
-.desk-settings #configForm > section.show { display: block; }
 .desk-settings label { display: block; color: #aeb7c5; font-size: 13px; margin: 12px 0; min-width: 0; }
 .desk-settings input:where(:not([type="checkbox"]):not([type="color"]):not([type="image"]):not([type="hidden"])) { width: 100%; min-width: 0; padding: 10px 12px; margin-top: 6px; border: 1px solid #3a404b; border-radius: 7px; background: #171b21; color: #eef0f3; }
 .desk-settings input:disabled { color: #929ba8; background: #242933; }
@@ -49,7 +45,7 @@ body.reordering-desk-channels { overflow-x: clip; }
 .desk-settings .delete { position: absolute; top: 16px; right: 0; width: 36px; padding: 4px; }
 .desk-settings .delete:hover, .desk-settings .btn-delete:hover { color: #ffc4c4; border-color: #a85a5a; }
 .desk-settings .tooltip { display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; border: 1px solid #6681a5; margin-left: 6px; }
-.desk-save-bar { position: sticky; top: 65px; z-index: 3; background: #1c2026; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 16px; padding: 12px 0; border-bottom: 1px solid #39414e; }
+.desk-save-bar { position: sticky; top: 65px; z-index: 3; background: #101215; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 16px; padding: 12px 0; }
 .desk-save-bar p { margin: 0; color: #aeb7c5; font-size: 13px; }
 .desk-settings .btn-save { background: #344154; color: #fff; }
 .desk-settings #iconDialog { background: #1c2026; color: #eef0f3; border: 1px solid #39414e; border-radius: 10px; padding: 16px; max-width: calc(100vw - 32px); }

@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="admin.css" />
     <link rel="stylesheet" href="desk-settings.css" />
+    <link rel="stylesheet" href="components/tabs.css" />
     <link rel="shortcut icon" href="/images/favicon.ico" type="image/x-icon" />
     <link rel="stylesheet" href="icons.css" />
   </head>
@@ -171,17 +172,17 @@
 <section class="card desk-settings disconnected" id="deskSettings">
 <h2>Desk settings</h2>
 <p class="muted">Configure the desk connection and the channels and AUXes available to mixer clients.</p>
-<nav class="desk-settings-tabs" aria-label="Desk settings" role="tablist">
-<button type="button" role="tab" id="desk-tab-global" data-desk-tab="global" aria-controls="global-content" aria-selected="true" class="selected">Connection</button>
-<button type="button" role="tab" id="desk-tab-aux" data-desk-tab="aux" aria-controls="aux-content" aria-selected="false">AUXes</button>
-<button type="button" role="tab" id="desk-tab-channels" data-desk-tab="channels" aria-controls="channels-content" aria-selected="false">Channels</button>
-<button type="button" role="tab" id="desk-tab-additional-devices" data-desk-tab="additional-devices" aria-controls="additional-devices-content" aria-selected="false">Additional devices</button>
-<button type="button" role="tab" id="desk-tab-presets" data-desk-tab="presets" aria-controls="presets-content" aria-selected="false">Desk presets</button></nav><div class="desk-save-bar">
+<nav data-tabs data-tabs-storage="deskSettingsTab" aria-label="Desk settings" role="tablist">
+<button type="button" role="tab" id="desk-tab-global" data-tab="global" aria-controls="global-content" aria-selected="true">Connection</button>
+<button type="button" role="tab" id="desk-tab-aux" data-tab="aux" aria-controls="aux-content" aria-selected="false">AUXes</button>
+<button type="button" role="tab" id="desk-tab-channels" data-tab="channels" aria-controls="channels-content" aria-selected="false">Channels</button>
+<button type="button" role="tab" id="desk-tab-additional-devices" data-tab="additional-devices" aria-controls="additional-devices-content" aria-selected="false">Additional devices</button>
+<button type="button" role="tab" id="desk-tab-presets" data-tab="presets" aria-controls="presets-content" aria-selected="false">Desk presets</button></nav><div class="desk-save-bar">
 <p id="deskSettingsMessage" role="status" aria-live="polite"></p>
 <button type="submit" form="configForm" class="btn-save" id="saveDeskSettings">Save settings</button></div>
 <form id="configForm" method="post" action="/admin" novalidate>
 
-			<section id="global-content" class="show" role="tabpanel">
+			<section id="global-content" role="tabpanel">
 				<div class="grid-container">
 					<div class="grid-column">
 						<h2>EarsMixer</h2>
@@ -201,7 +202,7 @@
 				</div>
 			</section>
 
-			<section id="aux-content" role="tabpanel">
+			<section id="aux-content" role="tabpanel" hidden>
 				<div class="button-row">
 					<button type="button" class="toggle-selection">Select All/None</button>
 					<button type="button" class="invert-selection">Invert Selection</button>
@@ -209,7 +210,7 @@
 				<div id="auxiliaries" class="list"></div>
 			</section>
 
-			<section id="channels-content" role="tabpanel">
+			<section id="channels-content" role="tabpanel" hidden>
 				<div class="button-row">
 					<button type="button" class="toggle-selection">Select All/None</button>
 					<button type="button" class="invert-selection">Invert Selection</button>
@@ -218,12 +219,12 @@
 				<div id="channels" class="list" aria-label="Desk channels" aria-describedby="channelOrderHint"></div>
 			</section>
 
-			<section id="additional-devices-content" role="tabpanel">
+			<section id="additional-devices-content" role="tabpanel" hidden>
 				<div id="externalDevices"></div>
 				<button type="button" id="addExternal">+</button>
 			</section>
 
-			<section id="presets-content" role="tabpanel">
+			<section id="presets-content" role="tabpanel" hidden>
 				<div class="tips">Presets allow you to save and restore your webmixer config (Auxiliaries, Channels).</div>
 					<div class="preset-manager-container">
 						<div class="new-preset-row">
@@ -350,6 +351,7 @@
     <script src="admin-password.js"></script>
     <script src="admin.js"></script>
     <script src="admin-templates.js"></script>
+    <script src="components/tabs.js"></script>
     <script src="desk-settings.js"></script>
   </body>
 </html>

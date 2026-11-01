@@ -1,0 +1,21 @@
+.tab-selector {
+  --tab-line: #39414e;
+  --tab-active: #aec9f0;
+  width: 100%;
+  min-width: 0;
+  margin: 18px 0;
+  background: linear-gradient(var(--tab-line), var(--tab-line)) left bottom / 100% 1px no-repeat;
+}
+.tab-selector-scroll { width: 100%; overflow-x: auto; scrollbar-width: none; }
+.tab-selector-scroll::-webkit-scrollbar { display: none; }
+.tab-selector-track { position: relative; display: flex; justify-content: flex-start; gap: 24px; width: max-content; min-width: 100%; }
+.tab-selector [role="tab"] { flex: 0 0 auto; min-height: 44px; margin: 0; padding: 12px 0; border: 0; border-radius: 0; background: transparent; color: #aeb7c5; font-size: 14px; font-weight: 700; white-space: nowrap; }
+.tab-selector [role="tab"]:hover { background: transparent; color: #eef0f3; }
+.tab-selector [role="tab"][aria-selected="true"] { color: #eef0f3; }
+.tab-selector [role="tab"]:focus-visible { outline-offset: -3px; }
+.tab-selector [role="tab"]:disabled, .tab-selector [role="tab"][aria-disabled="true"] { opacity: 0.45; cursor: default; }
+.tab-selector-indicator { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--tab-active); pointer-events: none; visibility: hidden; }
+.tab-selector[data-tabs-ready] .tab-selector-indicator { visibility: visible; transition: transform 220ms cubic-bezier(.2, .8, .2, 1), width 220ms cubic-bezier(.2, .8, .2, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .tab-selector[data-tabs-ready] .tab-selector-indicator { transition: none; }
+}

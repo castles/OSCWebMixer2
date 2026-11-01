@@ -8,7 +8,7 @@
 .password-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 #adminPasswordMessage, #adminLoginMessage { margin: 12px 0 0; font-size: 13px; }
 .admin-login { display: grid; place-items: center; padding: 20px; }
-.login-card { width: 100%; max-width: 420px; padding: 28px; }
+.login-card { width: 100%; max-width: 420px; padding: 28px; background: #1c2026; border: 1px solid #30353e; border-radius: 10px; }
 .login-card h1 { font-size: 22px; margin: 22px 0 8px; }
 .login-card > a { display: inline-block; margin-top: 20px; color: #aec9f0; font-size: 13px; }
 button:disabled { opacity: 0.6; cursor: wait; }
@@ -41,7 +41,7 @@ button:focus-visible, select:focus-visible, a:focus-visible, summary:focus-visib
 .page-content { padding: 24px; max-width: 1600px; margin: auto; }
 .page { display: none; gap: 16px; }
 .page.active { display: grid; }
-.card { min-width: 0; background: #1c2026; border: 1px solid #30353e; border-radius: 10px; padding: 18px; overflow-x: auto; }
+.card { min-width: 0; overflow-x: auto; }
 .card h2 { margin: 0 0 14px; font-size: 15px; font-weight: 600; }
 .card p { margin: 0 0 12px; }
 .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; background: transparent; border: 0; padding: 0; }
@@ -129,7 +129,6 @@ tbody tr:last-child td { border-bottom: 0; }
   .page-header { padding: 12px; gap: 10px; }
   .page-header h1 { font-size: 16px; }
   .page-content { padding: 12px; }
-  .card { padding: 12px; }
   .connection-status { font-size: 11px; }
   .client-meta { align-items: flex-start; }
   .stat { padding: 14px; }

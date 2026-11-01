@@ -20,6 +20,7 @@ debug = settingsRoot.querySelector("input[name=debug]"),
 auxiliaries = document.getElementById("auxiliaries"),
 channels = document.getElementById("channels"),
 iconDialog = document.getElementById("iconDialog");
+const deskTabs = TabSelector.mount(settingsRoot.querySelector("[data-tabs]"));
 
 let ws = null,
 timeout = null;
@@ -665,29 +666,8 @@ function fetchChannels()
 }
 
 function selectSettingsTab(tab) {
-  const selected = settingsRoot.querySelector('[data-desk-tab="' + tab + '"]');
-  if (!selected) return;
-  for (const button of settingsRoot.querySelectorAll('[data-desk-tab]')) {
-    const active = button === selected;
-    button.classList.toggle('selected', active);
-    button.setAttribute('aria-selected', String(active));
-    button.tabIndex = active ? 0 : -1;
-    document.getElementById(button.getAttribute('aria-controls')).classList.toggle('show', active);
-  }
-  sessionStorage.setItem('deskSettingsTab', tab);
+  deskTabs.select(tab);
 }
-for (const button of settingsRoot.querySelectorAll('[data-desk-tab]')) {
-  button.addEventListener('click', () => selectSettingsTab(button.dataset.deskTab));
-  button.addEventListener('keydown', event => {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-    event.preventDefault();
-    const tabs = [...settingsRoot.querySelectorAll('[data-desk-tab]')];
-    const index = tabs.indexOf(button);
-    const next = event.key === 'Home' ? tabs[0] : event.key === 'End' ? tabs.at(-1) : tabs[(index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
-    selectSettingsTab(next.dataset.deskTab); next.focus();
-  });
-}
-selectSettingsTab(sessionStorage.getItem('deskSettingsTab') || 'global');
 
 /**
  * Callback for when socket receives a message

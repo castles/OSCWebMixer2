@@ -54,6 +54,7 @@ function deskSettings(ids) {
     document: { getElementById: control, addEventListener() {} },
     window: { matchMedia: () => ({ matches: true, addEventListener() {} }) },
     sessionStorage: { getItem: () => null },
+    TabSelector: { mount: () => ({ select() {} }) },
     FormData,
   });
   const source = fs.readFileSync(path.join(__dirname, "../web/desk-settings.js"), "utf8");
