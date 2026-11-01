@@ -64,10 +64,9 @@ tbody tr:last-child td { border-bottom: 0; }
 .colour-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; }
 .error { color: #edbd80; }
 .muted { color: #a8afb9; font-size: 12px; }
-#clientsList, #disconnectedClientsList { display: grid; gap: 12px; }
+#clientsList { display: grid; gap: 12px; }
 .client-card { border: 1px solid #39414e; border-radius: 10px; padding: 14px; background: #20252d; min-width: 0; }
 .client-card[style] { border-left: 3px solid rgb(var(--client-tint, 100, 116, 139)); }
-.client-card-disconnected { opacity: 0.8; }
 .client-header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; margin-bottom: 12px; font-size: 14px; }
 .client-header strong { display: block; font-weight: 600; }
 .client-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }

@@ -17,10 +17,6 @@ const auxTableEl = document.getElementById("auxTable");
 const channelTableEl = document.getElementById("channelTable");
 const clientsListEl = document.getElementById("clientsList");
 const noClientsEl = document.getElementById("noClients");
-const disconnectedSectionEl = document.getElementById("disconnectedSection");
-const disconnectedClientsListEl = document.getElementById(
-  "disconnectedClientsList",
-);
 const auxMenuEl = document.getElementById("auxMenu");
 const liveMixPanelEl = document.getElementById("liveMixPanel");
 const liveMixFoldEl = document.getElementById("liveMixFold");
@@ -80,10 +76,8 @@ function showPage(page) {
         foldableOpen.delete(key);
       }
     }
-    [clientsListEl, disconnectedClientsListEl].forEach((container) => {
-      container.querySelectorAll(".client-fold").forEach((el) => {
-        el.open = false;
-      });
+    clientsListEl.querySelectorAll(".client-fold").forEach((el) => {
+      el.open = false;
     });
   }
 
@@ -309,18 +303,16 @@ function renderClientLevels(levels) {
 function escapeClientName(value) {
   return escapeHtml(value);
 }
-function renderClientCard(client, disconnected = false) {
+function renderClientCard(client) {
   const auxName =
     client.auxLabel ||
     (client.aux != null ? `AUX ${client.aux}` : "No AUX selected");
   const auxColour = client.auxColour
     ? `style="--client-tint: ${safeColour(client.auxColour)}"`
     : "";
-  const statusText = disconnected
-    ? `Disconnected ${formatTime(client.disconnectedAt)}`
-    : `Active ${formatTime(client.lastActivity)}`;
+  const statusText = `Active ${formatTime(client.lastActivity)}`;
 
-  return `<article class="client-card${disconnected ? " client-card-disconnected" : ""}" data-client-id="${escapeHtml(client.id)}" ${auxColour}>
+  return `<article class="client-card" data-client-id="${escapeHtml(client.id)}" ${auxColour}>
     <div class="client-header">
       <div>
         <strong>${escapeClientName(client.username || `Client ${client.id}`)}</strong>
@@ -354,22 +346,11 @@ function bindClientFoldables(container) {
   });
 }
 
-function renderClients(connected, disconnected) {
+function renderClients(connected) {
   noClientsEl.hidden = connected.length > 0;
   clientsListEl.innerHTML = connected.map((client) => renderClientCard(client)).join("");
   bindClientFoldables(clientsListEl);
 
-  if (!disconnected.length) {
-    disconnectedSectionEl.hidden = true;
-    disconnectedClientsListEl.innerHTML = "";
-    return;
-  }
-
-  disconnectedSectionEl.hidden = false;
-  disconnectedClientsListEl.innerHTML = disconnected
-    .map((client) => renderClientCard(client, true))
-    .join("");
-  bindClientFoldables(disconnectedClientsListEl);
 }
 
 function getAuxLabel(aux) {
@@ -598,7 +579,7 @@ function renderStatus(data, updateMixerUrl = true) {
   renderLiveMix();
   syncLiveMixStream();
 
-  renderClients(data.clients || [], data.disconnectedClients || []);
+  renderClients(data.clients || []);
   document.dispatchEvent(new CustomEvent("admin-mixer-config", { detail: { channels: data.channels, aux: data.aux } }));
 
   auxTableEl.innerHTML = data.aux
