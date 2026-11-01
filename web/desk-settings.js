@@ -24,6 +24,19 @@ iconDialog = document.getElementById("iconDialog");
 let ws = null,
 timeout = null;
 let deskSignInRequired = false;
+let channelSorter = null;
+const channelGrid = window.matchMedia("(min-width: 700px)");
+
+function settingsFormData() {
+  const data = new FormData(configForm);
+  // The server's parallel arrays are indexed by desk channel number, not display order.
+  const rows = Array.from(channels.querySelectorAll(".desk-channel")).sort((a, b) => Number(a.dataset.channel) - Number(b.dataset.channel));
+  for (const name of ["channelEnabled[]", "channelName[]", "channelOrder[]", "channelIcon[]", "sectionTitle[]"]) {
+    data.delete(name);
+    for (const row of rows) data.append(name, row.querySelector('[name="' + name + '"]').value);
+  }
+  return data;
+}
 
 async function deskFetch(url, options = {}) {
     const response = await fetch(url, { ...options, cache: "no-store" });
@@ -238,7 +251,7 @@ async function submitConfigForm() {
   settingsMessage.textContent = 'Saving settings…';
   try {
     const response = await deskFetch(configForm.action, {
-      method: 'POST', body: new URLSearchParams(new FormData(configForm))
+      method: 'POST', body: new URLSearchParams(settingsFormData())
     });
     const text = await response.text();
     const redirect = text.match(/document\.location\.href="([^"]+)"/);
@@ -253,7 +266,7 @@ async function submitConfigForm() {
 function markSettingsDirty() { settingsDirty = true; settingsMessage.textContent = 'Unsaved changes'; }
 for (const event of ['input', 'change']) configForm.addEventListener(event, e => { if (e.target.name) markSettingsDirty(); });
 configForm.addEventListener('click', e => {
-  if (e.target.closest('.up, .down, .toggle-selection, .invert-selection, .delete, #addExternal')) markSettingsDirty();
+  if (e.target.closest('.toggle-selection, .invert-selection, .delete, #addExternal')) markSettingsDirty();
 });
 iconDialog.addEventListener('click', e => { if (e.target.classList.contains('iconDialogImage')) markSettingsDirty(); });
 configForm.addEventListener("submit", async (e) => {
@@ -404,60 +417,36 @@ function createAux(number, enabled, name, colour, icon)
     auxiliaries.appendChild(auxWrap);
 }
 
-function moveup(e)
-{
-	e.preventDefault();
-
-	let currentOrder =  parseInt(getComputedStyle(e.target.parentNode).order);
-	if(currentOrder == 1)
-	{
-		return;
-	}
-
-	for(let channel of channels.childNodes)
-	{
-		let channelOrder =  parseInt(getComputedStyle(channel).order);
-		if(channelOrder == currentOrder - 1)
-		{
-			channel.style.order = channelOrder + 1;
-			channel.querySelector('input[name="channelOrder[]"]').value = channelOrder + 1;
-			break;
-		}
-	}
-
-	e.target.parentNode.style.order = currentOrder - 1;
-	e.target.parentNode.querySelector('input[name="channelOrder[]"]').value = currentOrder - 1;
-
-	ensureValidOrder(channels.childNodes, "channelOrder[]");
+function saveChannelOrder() {
+  for (const [index, row] of Array.from(channels.children).entries()) {
+    row.querySelector('input[name="channelOrder[]"]').value = index + 1;
+  }
 }
 
-function movedown(e)
-{
-	e.preventDefault();
-
-	let currentOrder =  parseInt(getComputedStyle(e.target.parentNode).order);
-	if(currentOrder == channels.childNodes.length)
-	{
-		return;
-	}
-
-	for(let channel of channels.childNodes)
-	{
-		let channelOrder =  parseInt(getComputedStyle(channel).order);
-		if(channelOrder == currentOrder + 1)
-		{
-			channel.style.order = channelOrder - 1;
-			channel.querySelector('input[name="channelOrder[]"]').value = channelOrder - 1;
-			break;
-		}
-	}
-
-	e.target.parentNode.style.order = currentOrder + 1;
-
-	e.target.parentNode.querySelector('input[name="channelOrder[]"]').value = currentOrder + 1;
-
-	ensureValidOrder(channels.childNodes, "channelOrder[]");
+function moveChannelWithKeys(event) {
+  if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
+  event.preventDefault();
+  const row = event.currentTarget.closest(".desk-channel");
+  const rows = Array.from(channels.children);
+  const columns = channelGrid.matches ? 2 : 1;
+  const delta = event.key === "ArrowUp" ? -columns : event.key === "ArrowDown" ? columns : event.key === "ArrowLeft" ? -1 : 1;
+  const index = rows.indexOf(row);
+  const target = index + delta;
+  if (target < 0 || target >= rows.length) return;
+  channels.insertBefore(row, delta > 0 ? rows[target].nextSibling : rows[target]);
+  event.currentTarget.focus();
+  row.scrollIntoView({ block: "nearest" });
+  saveChannelOrder();
+  markSettingsDirty();
 }
+
+function updateChannelDragging() {
+  if (channelSorter) channelSorter.option("handle", channelGrid.matches ? null : ".desk-channel-handle");
+  document.getElementById("channelOrderHint").textContent = channelGrid.matches
+    ? "Drag cards to reorder. Arrow keys on a handle also move channels."
+    : "Drag a handle to reorder. Arrow keys on a handle also move channels.";
+}
+channelGrid.addEventListener("change", updateChannelDragging);
 
 /**
  * Create a Channel
@@ -471,7 +460,17 @@ function movedown(e)
 function createChannel(number, enabled, name, order, icon="", title="")
 {
 	let channelWrap = document.createElement("div");
-	channelWrap.style.order = order;
+	channelWrap.className = "desk-channel";
+	channelWrap.dataset.channel = String(number);
+
+	const dragHandle = document.createElement("button");
+	dragHandle.type = "button";
+	dragHandle.className = "desk-channel-handle";
+	dragHandle.innerHTML = appIcon("gripVertical");
+	dragHandle.setAttribute("aria-label", "Move channel " + number);
+	dragHandle.setAttribute("aria-describedby", "channelOrderHint");
+	dragHandle.addEventListener("keydown", moveChannelWithKeys);
+	channelWrap.appendChild(dragHandle);
 
 	let channelNumberLabel = document.createElement("label");
 	channelNumberLabel.className = "listNumber";
@@ -479,6 +478,7 @@ function createChannel(number, enabled, name, order, icon="", title="")
 	channelWrap.appendChild(channelNumberLabel);
 
 	let sectionTitleLabel = document.createElement("label");
+	sectionTitleLabel.className = "desk-channel-section";
 
 	let sectionTitle = document.createElement("input");
 	sectionTitle.name = "sectionTitle[]";
@@ -488,12 +488,10 @@ function createChannel(number, enabled, name, order, icon="", title="")
 	sectionTitleLabel.appendChild(sectionTitle);
 	channelWrap.appendChild(sectionTitleLabel);
 
-	//channelWrap.draggable = true;
-	//channelWrap.droppable = true;
-
 	channelWrap.appendChild(createCheckboxField("channelEnabled[]", enabled, "", "", "enabled"));
 
 	let channelNameLabel = document.createElement("label");
+	channelNameLabel.className = "desk-channel-name";
 	let channelName = document.createElement("input");
 	channelName.name = "channelName[]";
     channelName.setAttribute("aria-label", "Channel " + number + " name");
@@ -503,18 +501,6 @@ function createChannel(number, enabled, name, order, icon="", title="")
 
 	addIconPicker(channelWrap, "channelIcon[]", icon);
 
-	let moveUp = document.createElement("button");
-	moveUp.className = "up";
-    moveUp.type = "button"; moveUp.setAttribute("aria-label", "Move channel " + number + " up");
-	moveUp.addEventListener("click", moveup);
-	channelWrap.appendChild(moveUp);
-
-	let moveDown = document.createElement("button");
-	moveDown.className = "down";
-    moveDown.type = "button"; moveDown.setAttribute("aria-label", "Move channel " + number + " down");
-	moveDown.addEventListener("click", movedown);
-	channelWrap.appendChild(moveDown);
-
 	let orderInput = document.createElement("input");
 	orderInput.type = "hidden";
 	orderInput.name = "channelOrder[]";
@@ -523,8 +509,6 @@ function createChannel(number, enabled, name, order, icon="", title="")
 
 	channelWrap.querySelector('input[type="checkbox"]').setAttribute("aria-label", "Enable channel " + number);
     channels.appendChild(channelWrap);
-
-	//makeDraggable(channelWrap);
 }
 
 /**
@@ -581,40 +565,6 @@ for(let button of settingsRoot.querySelectorAll(".invert-selection"))
 {
 	button.addEventListener("click", invertSelection);
 }
-
-/*let dropTarget = undefined;
-let dragged = undefined;
-function makeDraggable(target)
-{
-	target.addEventListener("dragstart", e => {
-		dragged = e.target;
-		dragged.classList.add("dragging");
-		e.dataTransfer.setData("text/plain", "data");
-	});
-
-	target.addEventListener("dragover", e => {
-		e.preventDefault();
-		dropTarget = e.target.closest("[draggable]");
-		dropTarget.classList.add("dragTarget");
-	});
-
-	target.addEventListener("dragleave", e => {
-		e.preventDefault();
-		dropTarget.classList.remove("dragTarget");
-	});
-
-	target.addEventListener("drop", e => {
-		e.preventDefault();
-		dropTarget.classList.remove("dragTarget");
-
-		dropTarget.before(dragged);
-
-		dragged.classList.remove("dragging");
-
-		dragged = undefined;
-		dropTarget = undefined;
-	});
-}*/
 
 //load current config and populate fields
 function loadConfig()
@@ -683,6 +633,7 @@ function fetchChannels()
 				return;
 			}
 
+			if (channelSorter) channelSorter.destroy();
 			channels.innerHTML = "";
 
 			for(let [index, channel] of json.entries())
@@ -690,37 +641,27 @@ function fetchChannels()
 				createChannel(index + 1, channel.enabled, channel.name, channel.order, channel.icon, channel.title);
 			}
 
-			ensureValidOrder(channels.childNodes, "channelOrder[]");
+			const rows = Array.from(channels.children).sort((a, b) =>
+                Number(a.querySelector('input[name="channelOrder[]"]').value) - Number(b.querySelector('input[name="channelOrder[]"]').value));
+            for (const row of rows) channels.appendChild(row);
+            saveChannelOrder();
+            channelSorter = new Sortable(channels, {
+                draggable: "> .desk-channel",
+                handle: channelGrid.matches ? null : ".desk-channel-handle",
+                filter: "input, label, .icon", preventOnFilter: false,
+                direction: () => channelGrid.matches ? "horizontal" : "vertical",
+                swapThreshold: 0.65, invertSwap: true,
+                animation: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 180,
+                ghostClass: "desk-channel-placeholder", chosenClass: "desk-channel-chosen", dragClass: "desk-channel-dragging",
+                forceFallback: true, fallbackOnBody: true, fallbackTolerance: 4,
+                forceAutoScrollFallback: true, scrollSensitivity: 70, scrollSpeed: 12,
+                onChoose: () => document.body.classList.add("reordering-desk-channels"),
+                onUnchoose: () => document.body.classList.remove("reordering-desk-channels"),
+                onClone: event => event.clone.classList.add("desk-settings"),
+                onEnd: event => { if (event.oldIndex !== event.newIndex) { saveChannelOrder(); markSettingsDirty(); } },
+            });
+            updateChannelDragging();
 		}).catch(reportSettingsError);
-}
-
-/**
- * Make sure the order of node elements are valid.
- * This is only necessary if the order gets out of wack. It should only get messed up if the channel list grows or shrinks.
- * @param {DOMElement} nodes - the dom nodes to check
- * @param {string} hiddenName - the name for hidden field that stores the order value
- */
-function ensureValidOrder(nodes, hiddenName)
-{
-	//create an array of dom elements and the current order value
-	let toSort = [];
-	for(let node of nodes)
-	{
-		toSort.push({
-			elm: node,
-			order: parseInt(getComputedStyle(node).order)
-		})
-	}
-
-	//sort the array by the order
-	toSort.sort((a, b) => a.order > b.order ? 1 : -1);
-
-	//loop through each element and update the order with a valid value
-	for(let [index, node] of toSort.entries())
-	{
-		node.elm.style.order = index + 1;
-		node.elm.querySelector('input[name="' + hiddenName + '"]').value = index + 1;
-	}
 }
 
 function selectSettingsTab(tab) {
@@ -776,7 +717,7 @@ function onMessage(e)
 	let channelNameMatch = json.address.match(/^\/Input_Channels\/([0-9]+)\/Channel_Input\/name$/);
 	if(channelNameMatch !== null)
 	{
-		const row = channels.childNodes[channelNameMatch[1]-1];
+		const row = channels.querySelector('[data-channel="' + channelNameMatch[1] + '"]');
 		if(!row)
 		{
 			return;
