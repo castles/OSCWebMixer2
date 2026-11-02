@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.1 — 2026-11-02
+
+Windows product version: **1.3.1**. Node package version: **2.6.0**.
+
+- Unified sidebar and page headers with aligned dividers, consistent Lucide icons and tighter page spacing.
+- Apply the saved sidebar state before displaying the layout to prevent an expanded sidebar flashing on reload.
+- Desk settings channels use a single column with handle dragging and keyboard reordering.
+- Added spacing between the sidebar brand and headphone icon.
+
 ## 1.3.0 — 2026-11-01
 
 Windows product version: **1.3.0**. Node package version: **2.6.0**.

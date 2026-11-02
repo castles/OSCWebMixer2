@@ -29,22 +29,20 @@ const panToggleLabelEl = document.getElementById("panToggleLabel");
 const sidebarNavEl = document.getElementById("sidebarNav");
 const sidebarToggleEl = document.getElementById("sidebarToggle");
 const sidebarCollapseEl = document.getElementById("sidebarCollapse");
-let sidebarCollapsed = false;
-try { sidebarCollapsed = localStorage.getItem("adminSidebarCollapsed") === "true"; } catch { /* Navigation still works without storage. */ }
+let sidebarCollapsed = AdminSidebarState.collapsed;
 
-function setSidebarCollapsed(collapsed) {
+function setSidebarCollapsed(collapsed, { persist = true } = {}) {
   sidebarCollapsed = collapsed;
-  document.body.classList.toggle("sidebar-collapsed", collapsed);
+  AdminSidebarState.set(collapsed, { persist });
   sidebarCollapseEl.setAttribute("aria-expanded", String(!collapsed));
   const label = collapsed ? "Expand sidebar" : "Collapse sidebar";
   sidebarCollapseEl.setAttribute("aria-label", label);
   sidebarCollapseEl.setAttribute("title", label);
 }
-setSidebarCollapsed(sidebarCollapsed);
+setSidebarCollapsed(sidebarCollapsed, { persist: false });
 sidebarCollapseEl.addEventListener("click", () => {
   document.body.classList.add("sidebar-animated");
   setSidebarCollapsed(!sidebarCollapsed);
-  try { localStorage.setItem("adminSidebarCollapsed", String(sidebarCollapsed)); } catch { /* The toggle works without persistence. */ }
 });
 const pageTitleEl = document.getElementById("pageTitle");
 const pageEls = document.querySelectorAll(".page");
@@ -57,6 +55,10 @@ const pageTitles = {
   templates: "Templates",
   config: "Config",
   "desk-settings": "Desk settings",
+};
+const pageIcons = {
+  overview: "layoutDashboard", "live-mix": "headphones", clients: "users",
+  templates: "list", config: "settings", "desk-settings": "slidersHorizontal",
 };
 
 const logIcons = { aux: appIcon("headphones"), level: appIcon("volume2"), pan: appIcon("moveHorizontal") };
@@ -104,6 +106,7 @@ function showPage(page) {
   window.location.hash = page;
 
   pageTitleEl.textContent = pageTitles[page];
+  document.getElementById("pageIcon").innerHTML = appIcon(pageIcons[page]);
 
   pageEls.forEach((el) => {
     el.classList.toggle("active", el.dataset.page === page);

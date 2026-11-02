@@ -26,7 +26,6 @@ let ws = null,
 timeout = null;
 let deskSignInRequired = false;
 let channelSorter = null;
-const channelGrid = window.matchMedia("(min-width: 700px)");
 
 function settingsFormData() {
   const data = new FormData(configForm);
@@ -429,8 +428,7 @@ function moveChannelWithKeys(event) {
   event.preventDefault();
   const row = event.currentTarget.closest(".desk-channel");
   const rows = Array.from(channels.children);
-  const columns = channelGrid.matches ? 2 : 1;
-  const delta = event.key === "ArrowUp" ? -columns : event.key === "ArrowDown" ? columns : event.key === "ArrowLeft" ? -1 : 1;
+  const delta = event.key === "ArrowUp" || event.key === "ArrowLeft" ? -1 : 1;
   const index = rows.indexOf(row);
   const target = index + delta;
   if (target < 0 || target >= rows.length) return;
@@ -442,12 +440,8 @@ function moveChannelWithKeys(event) {
 }
 
 function updateChannelDragging() {
-  if (channelSorter) channelSorter.option("handle", channelGrid.matches ? null : ".desk-channel-handle");
-  document.getElementById("channelOrderHint").textContent = channelGrid.matches
-    ? "Drag cards to reorder. Arrow keys on a handle also move channels."
-    : "Drag a handle to reorder. Arrow keys on a handle also move channels.";
+  document.getElementById("channelOrderHint").textContent = "Drag a handle to reorder. Arrow keys on a handle also move channels.";
 }
-channelGrid.addEventListener("change", updateChannelDragging);
 
 /**
  * Create a Channel
@@ -648,9 +642,9 @@ function fetchChannels()
             saveChannelOrder();
             channelSorter = new Sortable(channels, {
                 draggable: "> .desk-channel",
-                handle: channelGrid.matches ? null : ".desk-channel-handle",
+                handle: ".desk-channel-handle",
                 filter: "input, label, .icon", preventOnFilter: false,
-                direction: () => channelGrid.matches ? "horizontal" : "vertical",
+                direction: "vertical",
                 swapThreshold: 0.65, invertSwap: true,
                 animation: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 180,
                 ghostClass: "desk-channel-placeholder", chosenClass: "desk-channel-chosen", dragClass: "desk-channel-dragging",

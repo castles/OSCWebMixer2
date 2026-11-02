@@ -7,7 +7,7 @@
 .desk-settings .tips, .desk-settings .notice { font-size: 13px; color: #aeb7c5; margin-bottom: 16px; }
 .desk-settings .notice { padding: 14px; background: #242933; border-radius: 7px; }
 .desk-settings .grid-container { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.desk-settings .grid-column, .desk-settings .settings { min-width: 0; border: 1px solid #39414e; border-radius: 9px; padding: 16px; }
+.desk-settings .grid-column, .desk-settings .settings { min-width: 0; padding: 8px 0; }
 .desk-settings .button-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .desk-settings .list { display: flex; flex-direction: column; gap: 10px; }
 .desk-settings .list > div { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 12px; background: #20252d; border: 1px solid #39414e; border-radius: 9px; }
@@ -34,18 +34,13 @@ body.reordering-desk-channels { overflow-x: clip; }
 .desk-channel-placeholder { opacity: 0.5; border: 2px dashed #a5c5ff !important; background: #253349 !important; }
 .desk-channel-chosen { border-color: #8795ab !important; }
 .desk-channel-dragging { background: #282e38 !important; box-shadow: 0 4px 20px #0008; }
-@media (min-width: 700px) {
-  .desk-settings #channels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .desk-channel { cursor: grab; touch-action: none; }
-  .desk-channel input, .desk-channel label, .desk-channel .icon { cursor: auto; }
-  .desk-channel .icon { cursor: pointer; }
-}
 .desk-settings .external { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; position: relative; padding: 16px 44px 16px 0; border-bottom: 1px solid #39414e; margin-bottom: 16px; }
 .desk-settings .details { min-width: 0; }
 .desk-settings .delete { position: absolute; top: 16px; right: 0; width: 36px; padding: 4px; }
 .desk-settings .delete:hover, .desk-settings .btn-delete:hover { color: #ffc4c4; border-color: #a85a5a; }
 .desk-settings .tooltip { display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; border: 1px solid #6681a5; margin-left: 6px; }
-.desk-save-bar { position: sticky; top: 65px; z-index: 3; background: #101215; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 16px; padding: 12px 0; }
+.desk-settings > .tab-selector { margin: 4px 0 0; }
+.desk-save-bar { position: sticky; top: var(--admin-header-height, 56px); z-index: 3; background: #101215; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 8px; padding: 4px 0; }
 .desk-save-bar p { margin: 0; color: #aeb7c5; font-size: 13px; }
 .desk-settings .btn-save { background: #344154; color: #fff; }
 .desk-settings #iconDialog { background: #1c2026; color: #eef0f3; border: 1px solid #39414e; border-radius: 10px; padding: 16px; max-width: calc(100vw - 32px); }

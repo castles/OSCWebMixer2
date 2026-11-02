@@ -79,11 +79,11 @@ test("live desk renames target the physical channel after display reordering", (
   assert.equal(settings.rows[0].querySelector('[name="channelName[]"]').value, "channelName[]3");
 });
 
-test("keyboard moves follow the two-column grid and update saved order and dirty state", () => {
+test("keyboard moves follow the single-column list and update saved order and dirty state", () => {
   const settings = deskSettings([1, 2, 3, 4]);
   const handle = { closest: () => settings.rows[0], focus() {} };
   settings.moveChannelWithKeys({ key: "ArrowDown", currentTarget: handle, preventDefault() {} });
-  assert.deepEqual(settings.controls.get("channels").children.map(row => row.dataset.channel), ["2", "3", "1", "4"]);
-  assert.deepEqual(settings.settingsFormData().getAll("channelOrder[]"), ["3", "1", "2", "4"]);
+  assert.deepEqual(settings.controls.get("channels").children.map(row => row.dataset.channel), ["2", "1", "3", "4"]);
+  assert.deepEqual(settings.settingsFormData().getAll("channelOrder[]"), ["2", "1", "3", "4"]);
   assert.equal(settings.controls.get("deskSettingsMessage").textContent, "Unsaved changes");
 });

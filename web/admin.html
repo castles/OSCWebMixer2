@@ -4,6 +4,7 @@
     <title>EarsMixer Admin</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="sidebar-state.js"></script>
     <link rel="stylesheet" href="admin.css" />
     <link rel="stylesheet" href="desk-settings.css" />
     <link rel="stylesheet" href="components/tabs.css" />
@@ -15,6 +16,7 @@
       <aside class="sidebar" id="adminSidebar" aria-label="Admin navigation">
         <div class="sidebar-brand">
           <div class="admin-brand"><img src="/images/Glow_Logo_2026.svg" alt="Glow"><span>EarsMixer</span></div>
+          <svg class="app-icon sidebar-mark" aria-hidden="true"><use href="vendor/lucide.svg#headphones"></use></svg>
         </div>
 
         <nav class="sidebar-nav" id="sidebarNav">
@@ -22,12 +24,12 @@
             <svg class="app-icon" aria-hidden="true" focusable="false"><use href="vendor/lucide.svg#layoutDashboard"></use></svg><span class="nav-label">Overview</span>
           </button>
           <button type="button" class="nav-item" data-page="live-mix" aria-label="Live mix" title="Live mix">
-            <svg class="app-icon" aria-hidden="true" focusable="false"><use href="vendor/lucide.svg#slidersHorizontal"></use></svg><span class="nav-label">Live mix</span>
+            <svg class="app-icon" aria-hidden="true" focusable="false"><use href="vendor/lucide.svg#headphones"></use></svg><span class="nav-label">Live mix</span>
           </button>
           <button type="button" class="nav-item" data-page="clients" aria-label="Clients" title="Clients">
             <svg class="app-icon" aria-hidden="true" focusable="false"><use href="vendor/lucide.svg#users"></use></svg><span class="nav-label">Clients</span>
           </button>
-          <button type="button" class="nav-item" data-page="templates" aria-label="Templates" title="Templates"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#layoutDashboard"></use></svg><span class="nav-label">Templates</span></button>
+          <button type="button" class="nav-item" data-page="templates" aria-label="Templates" title="Templates"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#list"></use></svg><span class="nav-label">Templates</span></button>
           <button type="button" class="nav-item" data-page="desk-settings" aria-label="Desk settings" title="Desk settings"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#slidersHorizontal"></use></svg><span class="nav-label">Desk settings</span></button>
           <button type="button" class="nav-item" data-page="config" aria-label="Config" title="Config">
             <svg class="app-icon" aria-hidden="true" focusable="false"><use href="vendor/lucide.svg#settings"></use></svg><span class="nav-label">Config</span>
@@ -50,9 +52,9 @@
             aria-controls="adminSidebar"
             aria-expanded="false"
           >
-            <svg class="app-icon" aria-hidden="true" focusable="false"><use href="vendor/lucide.svg#menu"></use></svg> Menu
+            <svg class="app-icon" aria-hidden="true" focusable="false"><use href="vendor/lucide.svg#menu"></use></svg><span class="sidebar-toggle-label">Menu</span>
           </button>
-          <h1 id="pageTitle">Overview</h1>
+          <div class="page-heading"><span id="pageIcon" aria-hidden="true"><svg class="app-icon"><use href="vendor/lucide.svg#layoutDashboard"></use></svg></span><h1 id="pageTitle">Overview</h1></div>
           <span id="adminConnection" class="connection-status" role="status" aria-live="polite"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#wifi"></use></svg><span>Connecting…</span></span>
           <button id="adminLogout" type="button" hidden>Sign out</button>
         </header>
@@ -169,7 +171,6 @@
             </section>
 <section class="page" data-page="desk-settings">
 <section class="card desk-settings disconnected" id="deskSettings">
-<h2>Desk settings</h2>
 <p class="muted">Configure the desk connection and the channels and AUXes available to mixer clients.</p>
 <nav data-tabs data-tabs-storage="deskSettingsTab" aria-label="Desk settings" role="tablist">
 <button type="button" role="tab" id="desk-tab-global" data-tab="global" aria-controls="global-content" aria-selected="true">Connection</button>
@@ -214,7 +215,7 @@
 					<button type="button" class="toggle-selection">Select All/None</button>
 					<button type="button" class="invert-selection">Invert Selection</button>
 				</div>
-				<p id="channelOrderHint" class="muted">Drag cards to reorder. Arrow keys on a handle also move channels.</p>
+				<p id="channelOrderHint" class="muted">Drag a handle to reorder. Arrow keys on a handle also move channels.</p>
 				<div id="channels" class="list" aria-label="Desk channels" aria-describedby="channelOrderHint"></div>
 			</section>
 

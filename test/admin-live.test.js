@@ -70,6 +70,7 @@ async function createAdmin() {
     window: { location: { hash: "#live-mix" }, addEventListener() {} },
     location: { protocol: "http:", host: "localhost" },
     sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+    AdminSidebarState: { collapsed: false, set() {} },
     appIcon: () => "", renderAdminPassword() {},
     CustomEvent: class {}, WebSocket: Socket,
     adminFetch: (...args) => fetchStatus(...args),
