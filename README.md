@@ -36,6 +36,14 @@ The default web port is **80**. The tray's browser links and QR code follow the 
 
 If your network has a DNS name for the mixer, enter it in **Admin → Overview → Mixer URL → Custom URL** and click **Save URL**. For example, `ears.glow.uk` becomes `http://ears.glow.uk/`; you can also enter a full HTTPS URL or include a port, such as `http://ears.glow.uk:8082`. The mixer link and QR codes in the dashboard and tray use this saved address after restarts. DNS must already resolve the name to the server; a DNS record alone does not change the web port. Clear the field and save to return to the server address.
 
+## Automatic discovery
+
+The Windows service and `npm run dev` advertise `_earsmixer._tcp.local` using Bonjour/mDNS. In a native EarsMixer app build, open **Connect → Nearby mixers** and select the server. The advertisement includes the actual web port, so the installed service and a demo on port 8082 appear separately. Account data is not advertised.
+
+Discovery uses UDP 5353 on the local network. The installer’s existing private-network firewall rule permits it. Guest Wi-Fi isolation, VLAN boundaries or blocked multicast can prevent discovery; manual addresses and QR codes still work. Set `OSC_WEBMIXER_DISCOVERY=0` in the server environment to disable advertisements. A server bound only to loopback does not advertise on the LAN.
+
+Advertised links and QR codes skip common virtual adapters, including Windows Hyper-V and WSL. With multiple physical networks, use **Overview → Mixer URL → Custom URL** to select the address for your musicians. Discovery advertises eligible physical interfaces and refreshes when addresses change.
+
 ## Use the service manager
 
 The tray icon appears in the notification area at the right of the Windows taskbar; it may be inside the hidden-icons menu.

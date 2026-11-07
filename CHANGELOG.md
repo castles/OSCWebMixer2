@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Advertise the installed service and demo using Bonjour/mDNS for discovery by native mobile clients.
+- Include the actual HTTP port, refresh advertisements on network changes, and withdraw them on shutdown.
+- Exclude common virtual and link-local adapters from automatic mixer links and QR codes.
+
 ## 1.4.0 — 2026-11-07
 
 Windows product version: **1.4.0**. Node package version: **2.6.0**.

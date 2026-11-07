@@ -18,6 +18,8 @@ const { QueryQueue } = require('./lib/query-queue.js');
 const { productVersion } = require('./lib/product-info.js');
 const appVersion = productVersion();
 const { normalizeMixerUrl } = require('./lib/mixer-url.js');
+const { advertiseMixer } = require('./lib/discovery.js');
+const discoveryStops = new Set();
 let adminAuth;
 let userAccounts;
 let discoveryTimer = null;
@@ -269,7 +271,15 @@ function startServer()
 		}
 		logger.error("Web server error: " + (err && err.stack ? err.stack : err));
 	});
-	server.listen(config.server.port, process.env.OSC_WEBMIXER_BIND_ADDRESS || "0.0.0.0");
+	const webServer = server;
+	const bindAddress = process.env.OSC_WEBMIXER_BIND_ADDRESS || "0.0.0.0";
+	webServer.once('listening', () => {
+		if (process.env.OSC_WEBMIXER_DISCOVERY === '0') return;
+		const stop = advertiseMixer({ port: webServer.address().port, version: appVersion, bindAddress, logger });
+		discoveryStops.add(stop);
+		webServer.once('close', () => { discoveryStops.delete(stop); void stop(); });
+	});
+	webServer.listen(config.server.port, bindAddress);
 
 	// Session middleware above protects both dashboard and native settings routes.
 	//when a post request occurs in the admin area
@@ -1221,6 +1231,15 @@ function processPlugins(oscMsg)
 	}
 	return oscMsg;
 }
+
+// Give Bonjour time to withdraw advertisements when the service/demo stops.
+for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => {
+	const timeout = setTimeout(() => process.exit(0), 1500);
+	Promise.allSettled([...discoveryStops].map(stop => stop())).then(() => {
+		clearTimeout(timeout);
+		process.exit(0);
+	});
+});
 
 createAdminAuth().then(auth => {
 	adminAuth = auth;

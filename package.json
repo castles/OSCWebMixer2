@@ -1,7 +1,9 @@
 {
     "name": "earsmixer",
     "main": "index.js",
-    "engines": { "node": ">=22.13.0" },
+    "engines": {
+        "node": ">=22.13.0"
+    },
     "version": "2.6.0",
     "description": "A server that allows web clients and other external devices to control their own mix for DiGiCo sound desks.",
     "author": "Marc Castles",
@@ -37,6 +39,7 @@
         "esbuild": "0.28.2"
     },
     "dependencies": {
+        "@homebridge/ciao": "^1.4.0",
         "colortranslator": "^6.1.1",
         "express": "^4.22.1",
         "ora": "^5.4.1",
