@@ -98,10 +98,28 @@
     </main>
     <dialog id="profileDialog" class="settings-dialog" aria-labelledby="profileTitle">
       <div class="settings-dialog-header"><div><h2 id="profileTitle">Your profile</h2></div><button id="closeProfile" type="button" aria-label="Close profile"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#x"></use></svg></button></div>
+      <section id="accountPanel" class="settings-section">
+        <div id="accountGuest">
+          <h3>Save your profile</h3><p class="settings-detail">Sign in to keep your layout, favourites and view settings on this EarsMixer server, on web and mobile.</p>
+          <form id="accountForm">
+            <label for="accountUsername">Account username</label><input id="accountUsername" autocomplete="username" required minlength="3" maxlength="32" autocapitalize="none" spellcheck="false">
+            <label for="accountPassword">Password</label><input id="accountPassword" type="password" autocomplete="current-password" required minlength="8" maxlength="128">
+            <label id="accountImportLabel" class="account-import" hidden><input id="accountImportLayout" type="checkbox" checked>Save this device’s layout to my new account</label>
+            <div class="dialog-actions"><button id="accountSubmit" type="submit">Sign in</button><button id="accountMode" type="button">Create account</button></div>
+          </form>
+        </div>
+        <div id="accountMember" hidden>
+          <p id="accountIdentity" class="account-identity"></p>
+          <form id="accountNameForm"><label for="accountDisplayName">Display name</label><input id="accountDisplayName" autocomplete="nickname" maxlength="80" required><button type="submit">Save name</button></form>
+          <p id="accountSyncStatus" class="settings-detail" role="status" aria-live="polite"></p>
+          <div class="dialog-actions"><button id="saveAccountLayout" type="button">Save this layout</button><button id="reloadAccountLayout" type="button" hidden>Load saved layout</button><button id="accountLogout" type="button">Sign out</button></div>
+        </div>
+        <p id="accountMessage" class="settings-detail" role="status" aria-live="polite"></p>
+      </section>
       <form id="usernameForm" class="settings-section"><label for="deviceUsername">Your username</label><input id="deviceUsername" maxlength="80" required autocomplete="nickname"><p id="usernameError" class="settings-detail" role="alert"></p><p id="usernameSaved" class="settings-detail" role="status" hidden></p><div class="dialog-actions"><button type="submit">Save username</button><button id="skipUsername" type="button" hidden>Skip for now</button></div></form>
       <div id="profileTemplates">
       <section class="settings-section"><p id="layoutDescription" class="settings-detail">Choose a pre-made layout designed for your role, with the most relevant channels at the top so they’re easy to find.</p><label for="savedTemplate">Template</label><select id="savedTemplate" aria-describedby="layoutDescription" disabled><option value="">Loading templates…</option></select><p id="templateUpdated" class="settings-detail"></p><button id="loadTemplate" type="button" disabled><svg class="app-icon" width="20" height="20" aria-hidden="true"><use href="vendor/lucide.svg#download"></use></svg>Load template</button><button id="retryTemplates" type="button" hidden>Retry loading templates</button></section>
-      <section class="settings-section"><p class="settings-detail">Starting fresh resets your layout and favourites. Settings stay on this device until browser storage is cleared or resets.</p><button id="startFresh" type="button">Start fresh</button></section>
+      <section class="settings-section"><p class="settings-detail">Starting fresh resets your layout and favourites. Signed-in layouts save to this server; guest settings stay on this device. Fader levels are never recalled.</p><button id="startFresh" type="button">Start fresh</button></section>
       <p id="templateMessage" role="status" aria-live="polite"></p>
       </div>
     </dialog>
@@ -110,5 +128,6 @@
     <script src="identity.js"></script>
     <script src="mixer.min.js?v=2.6.0"></script>
     <script src="templates.js"></script>
+    <script src="accounts.js"></script>
   </body>
 </html>

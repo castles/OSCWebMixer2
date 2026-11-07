@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.4.0 — 2026-11-07
+
+Windows product version: **1.4.0**. Node package version: **2.6.0**.
+
+- Local musician accounts use SQLite in the existing Windows service data folder, without a separate database service or cloud dependency.
+- Save and restore display names, selected AUX, channel order, favourites and view preferences across browsers and the native mobile client. Fader levels and pan are never recalled.
+- Layout changes save automatically, with explicit conflict resolution when another device changes the saved layout.
+- Guest mixing stays available; signing out restores the device's guest settings. Musician sessions survive service restarts.
+- Admin Config includes musician account listing and password recovery that preserves layouts and invalidates old sign-ins.
+
 ## 1.3.1 — 2026-11-02
 
 Windows product version: **1.3.1**. Node package version: **2.6.0**.

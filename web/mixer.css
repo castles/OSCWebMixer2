@@ -1,6 +1,12 @@
 
 @import "./icons.css";
 
+.settings-dialog h3 { margin: 0 0 8px; font-size: 15px; }
+.account-identity { font-weight: 600; color: #eef0f3; }
+.settings-dialog .account-import { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-top: 12px; }
+.settings-dialog .account-import input { width: 18px; min-height: 18px; margin: 0; }
+#accountNameForm button { margin-top: 8px; }
+
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; overflow: hidden; }

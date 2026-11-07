@@ -50,7 +50,7 @@ The service is named **EarsMixer** in Windows Services. It starts automatically 
 
 ## Mixer and admin dashboard
 
-Musicians can choose list or grid views, reorder channels, save favourites and use compact or fullscreen controls. Layout preferences are saved per AUX on each browser/device.
+Musicians can choose list or grid views, reorder channels, save favourites and use compact or fullscreen controls. Guests keep their preferences on the current browser/device. Sign in to save a personal layout on the server and use it on another device.
 
 To adjust a fader with a finger, mouse or pen, drag its handle. Tapping or swiping the fader track does not change the level, so you can scroll through the channels without jumping a fader. Keyboard and assistive-technology controls remain available.
 
@@ -72,6 +72,18 @@ Screenshots use the offline demo with sample console data. The mixer is shown at
 
 To protect the dashboard, open **Admin → Config** and set an admin password of at least eight characters. Musicians can still access the mixer, and the tray QR code continues to work. Restarting the server clears admin sign-in sessions, so administrators will need to sign in again.
 
+## Accounts and mobile app
+
+Open **Mixer controls → Your profile → Create account** and choose a username and password. By default, your current layout is saved when you register. Sign in with that account on another browser or in the [EarsMixer mobile app](https://github.com/joeclack/EarsMixerApp) connected to the same server to restore it. No email, internet connection or separate database service is required.
+
+Accounts save your display name, selected AUX, channel order, favourites for each AUX, list/grid view and compact mode. Changes save automatically after you create or explicitly save a layout. Fader levels and pan are never saved or recalled by an account. If two devices edit the same layout, **Load saved layout** restores the server copy; **Keep this layout** explicitly replaces it. Signing out restores this device's guest layout.
+
+Accounts belong to the local EarsMixer server; they do not sync across independent servers. Use the same server address consistently to retain the device's sign-in cookie. Musician sessions last 30 days and survive a service restart. The mixer remains available to guests, and musician accounts do not grant admin access.
+
+For a forgotten password, an administrator can open **Admin → Config → Musician accounts → Reset password**. Set an admin password first. Resetting a musician's password signs out all their devices and preserves the saved layout.
+
+The mobile app is a client of this same Windows service. It remembers server addresses, scans the existing connection QR code and opens the mixer with the same account and layout controls. See its repository for Android preview installation and iPhone development/distribution instructions.
+
 ## Updates, settings and backups
 
 The tray checks GitHub shortly after starting and every six hours while it is running. A newer stable Windows release produces a tray notification with an optional download. You can also choose **Check for updates** at any time. Checks run in the background; an offline mixer network does not interrupt the service or show automatic error dialogs. Updates are never installed automatically: download the installer and run it when you are ready for the service to restart. Closing the tray stops update checks while the mixer service keeps running.
@@ -81,11 +93,13 @@ Download and run the latest installer to update EarsMixer; you do not need to un
 Saved files are in `%PROGRAMDATA%\EarsMixer`:
 
 - `config/` — console connection, channel/AUX settings and shared desk presets.
-- `data/` — musician templates and the admin password record.
+- `data/` — musician templates, the admin password record, and `earsmixer.sqlite` containing musician accounts, saved layouts and sign-in sessions.
 - `plugins/` — optional custom plugins.
 - `logs/` — server and service logs.
 
 Upgrades and uninstall preserve these folders. To make a backup, stop the service from the tray, copy the EarsMixer data folder, then start the service again. Restoring files or adding plugins requires administrator permission.
+
+Copy the whole `data/` directory, including any `earsmixer.sqlite-wal` and `earsmixer.sqlite-shm` files. Keep the backup private: it includes password hashes and session records. The existing service data directory is used automatically; source deployments can set `OSC_WEBMIXER_DATA_DIR` to a persistent writable directory. Database schema upgrades run when the service starts.
 
 The installer also migrates settings from earlier installations using the `OSCWebMixer2` folders, preserving the originals. Per-user settings are migrated from the account running setup; if you install using a different administrator account, copy the original user's settings manually.
 
@@ -100,7 +114,7 @@ The installer also migrates settings from earlier installations using the `OSCWe
 
 These instructions are for working on the source code. They are not required to install the released app.
 
-Install Node.js 22 or newer and Git, then run:
+Install Node.js 22.13 or newer (with built-in SQLite) and Git, then run:
 
 ```bash
 npm ci

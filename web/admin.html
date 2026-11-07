@@ -310,6 +310,24 @@
                 <p id="adminPasswordMessage" role="status" aria-live="polite"></p>
               </section>
               <section class="card">
+                <h2>Musician accounts</h2>
+                <p class="muted">Accounts and personal layouts are stored on this server. Resetting a password signs the musician out on all devices and keeps their saved layout.</p>
+                <button id="refreshUsers" type="button">Refresh accounts</button>
+                <p id="usersMessage" role="status" aria-live="polite"></p>
+                <table>
+                  <thead><tr><th>Username</th><th>Display name</th><th>Account recovery</th></tr></thead>
+                  <tbody id="usersTable"></tbody>
+                </table>
+                <form id="userPasswordForm" hidden>
+                  <h3 id="userPasswordTitle">Reset password</h3>
+                  <div class="password-fields">
+                    <label class="password-field">New password<input id="userNewPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" required></label>
+                    <label class="password-field">Confirm new password<input id="userConfirmPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" required></label>
+                    <div class="password-actions"><button id="resetUserPassword" type="submit">Reset password</button><button id="cancelUserPassword" type="button">Cancel</button></div>
+                  </div>
+                </form>
+              </section>
+              <section class="card">
                 <h2>AUX sends</h2>
                 <table>
                   <thead>
@@ -351,6 +369,7 @@
     <script src="admin-password.js"></script>
     <script src="admin.js"></script>
     <script src="admin-templates.js"></script>
+    <script src="admin-users.js"></script>
     <script src="components/tabs.js"></script>
     <script src="desk-settings.js"></script>
   </body>

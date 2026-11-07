@@ -449,6 +449,7 @@ function restoreChannelOrder() {
 
 function saveChannelOrder() {
   localStorage.setItem("channelLayout", JSON.stringify(Array.from(channelsDiv.children, row => row.dataset.channel)));
+  document.dispatchEvent(new Event("mixer-preferences-changed"));
 
 }
 
@@ -493,17 +494,20 @@ auxSelect.addEventListener("change", () => {
   const option = auxSelect.selectedOptions[0];
   if (option) document.body.style.setProperty("--tint", option.dataset.colour);
   restoreFavourites(); requestValues();
+  document.dispatchEvent(new Event("mixer-preferences-changed"));
 
 });
 favourites.addEventListener("change", () => {
   localStorage.setItem("aux" + auxSelect.value + "favChecked", String(favourites.checked));
   applyFavourites();
+  document.dispatchEvent(new Event("mixer-preferences-changed"));
 
 });
 channelsDiv.addEventListener("change", event => {
   if (event.target.name !== "fav[]") return;
   localStorage.setItem("aux" + auxSelect.value + "fav", Array.from(channelsDiv.querySelectorAll('input[name="fav[]"]:checked'), checkbox => checkbox.value).join(","));
   applyFavourites();
+  document.dispatchEvent(new Event("mixer-preferences-changed"));
 
 });
 function setEditingLayout(active) {
@@ -556,6 +560,7 @@ function setChannelView(view) {
   listViewButton.setAttribute("aria-pressed", String(!grid));
   gridViewButton.setAttribute("aria-pressed", String(grid));
   updateSortingMode();
+  document.dispatchEvent(new Event("mixer-preferences-changed"));
 }
 listViewButton.addEventListener("click", () => { localStorage.setItem("channelView", "list"); setChannelView("list"); });
 gridViewButton.addEventListener("click", () => { localStorage.setItem("channelView", "grid"); setChannelView("grid"); });
@@ -565,6 +570,7 @@ const compactModeButton = document.getElementById("compactMode");
 function setCompactMode(compact) {
   document.body.classList.toggle("compact-mode", compact);
   compactModeButton.setAttribute("aria-pressed", String(compact));
+  document.dispatchEvent(new Event("mixer-preferences-changed"));
 }
 compactModeButton.addEventListener("click", () => {
   const compact = !document.body.classList.contains("compact-mode");

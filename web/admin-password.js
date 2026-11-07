@@ -58,6 +58,7 @@ async function saveAdminPassword(remove) {
     if (!response.ok) throw new Error(body.error || "Could not save the password.");
     adminPasswordForm.reset();
     renderAdminPassword(body.enabled);
+    document.dispatchEvent(new Event("admin-password-changed"));
     passwordMessage(remove
       ? "Password removed. The admin dashboard is now open to anyone on this network."
       : "Password saved. Other admins must sign in with the new password. You are still signed in.");
