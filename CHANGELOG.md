@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 1.5.0 — 2026-11-08
+
+Windows product version: **1.5.0**. Node package version: **2.7.0**.
+
+- Share other connected users and nicknames with clients on the same AUX, updating on join, leave, nickname and AUX changes. Exclude admin observers and all network addresses/activity logs.
+- Detect abandoned WebSocket connections with ping/pong so stale presence is removed.
 
 - Remove musician accounts, passwords, account APIs and admin account management.
 - Save nicknames automatically on the device; keep mixer layouts in local browser storage.

@@ -18,6 +18,7 @@ const { productVersion } = require('./lib/product-info.js');
 const appVersion = productVersion();
 const { normalizeMixerUrl } = require('./lib/mixer-url.js');
 const { advertiseMixer } = require('./lib/discovery.js');
+const { sendAuxPresence, broadcastAuxPresence } = require('./lib/aux-presence.js');
 const discoveryStops = new Set();
 let adminAuth;
 let discoveryTimer = null;
@@ -728,8 +729,11 @@ function selectClientAux(socket, aux) {
 	if(!selected) return false;
 	if(socket.clientInfo.aux !== aux) {
 		logClient(socket, { type: 'aux', aux, auxLabel: selected.label, value: aux });
+		const previous = socket.clientInfo.aux;
 		socket.clientInfo.aux = aux;
 		warmAux(aux, true, socket.mixConfig);
+		broadcastAuxPresence(connections, previous);
+		broadcastAuxPresence(connections, aux);
 	}
 	return true;
 }
@@ -746,8 +750,19 @@ function warmAux(aux, priority = true, mix = getVisibleConfig()) {
 function startWebSocketServer() {
 	if(wss) return;
 	wss = new webSocket.Server({ server });
+	const presenceServer = wss;
+	const presenceHeartbeat = setInterval(() => {
+		for (const socket of presenceServer.clients) {
+			if (socket.isAlive === false) { socket.terminate(); continue; }
+			socket.isAlive = false; socket.ping();
+		}
+	}, 30000);
+	presenceHeartbeat.unref();
+	wss.on('close', () => clearInterval(presenceHeartbeat));
 	wss.on('connection', function(socket, req) {
 		if(!loaded) { socket.close(); return; }
+		socket.isAlive = true;
+		socket.on('pong', () => { socket.isAlive = true; });
 		socket.isObserver = new URL(req.url, 'http://localhost').searchParams.get('role') === 'observer';
 		// Settings changes close clients; reuse this configuration during fader moves.
 		socket.mixConfig = getVisibleConfig();
@@ -755,6 +770,7 @@ function startWebSocketServer() {
 			connectedAt: Date.now(), lastActivity: Date.now(), aux: null, log: [] };
 		connections.push(socket);
 		socket.send(buildConfig());
+		sendAuxPresence(socket, connections);
 		socket.on('message', function(data) {
 			let msg;
 			try { msg = JSON.parse(data.toString()); } catch { return; }
@@ -762,10 +778,20 @@ function startWebSocketServer() {
 			if(socket.isObserver) return;
 			socket.clientInfo.lastActivity = Date.now();
 			if('username' in msg) {
-				try { socket.clientInfo.username = deviceUsername(msg.username); } catch {}
+				try {
+					const nickname = deviceUsername(msg.username);
+					if (nickname !== socket.clientInfo.username) {
+						socket.clientInfo.username = nickname;
+						broadcastAuxPresence(connections, socket.clientInfo.aux);
+					}
+				} catch {}
 				return;
 			}
-			if('selectedAux' in msg) { selectClientAux(socket, Number(msg.selectedAux)); return; }
+			if('selectedAux' in msg) {
+				const previous = socket.clientInfo.aux;
+				if (selectClientAux(socket, Number(msg.selectedAux)) && previous === socket.clientInfo.aux) sendAuxPresence(socket, connections);
+				return;
+			}
 			if(typeof msg.address !== 'string' || !Array.isArray(msg.args)) return;
 			const match = /^\/Input_Channels\/(\d+)\/Aux_Send\/(\d+)\/send_(level|pan)(\/\?)?$/.exec(msg.address);
 			if(!match) return;
@@ -796,6 +822,7 @@ function startWebSocketServer() {
 			if(!socket.isObserver) disconnectedClients.unshift(serializeClient(socket, Date.now()));
 			if(disconnectedClients.length > 50) disconnectedClients.pop();
 			connections = connections.filter(connection => connection !== socket);
+			if (!socket.isObserver) broadcastAuxPresence(connections, socket.clientInfo.aux);
 		});
 		socket.on('error', err => logger.debug('Client socket error: ' + err.message));
 	});

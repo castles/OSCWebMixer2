@@ -147,3 +147,7 @@ Normal CI runs compile the installer and run the application tests, without inst
 ## Credits and licence
 
 EarsMixer is maintained by Joe Clack and is based on [OSCWebMixer2 by Marc Castles](https://github.com/castles/OSCWebMixer2). The project is distributed under the [MIT licence](LICENSE).
+
+## AUX presence for native clients
+
+The server sends `{ "presence": { "aux": 2, "peers": [{ "id": "7", "nickname": "Joe" }] } }` over the existing mixer WebSocket. Each list includes only other open musician connections on the selected AUX. It updates after AUX selection, nickname changes, joins and disconnects; an empty list clears the display. Admin observer connections are excluded. IDs last for that connection and nicknames may be null. The mobile app displays profile circles; existing web clients continue to work.
