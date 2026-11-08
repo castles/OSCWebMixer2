@@ -132,6 +132,26 @@ test("offline v2: discovery, scoped clients, dashboard, templates, admin session
         && result.clients.some(client => client.username === "Drummer" && client.aux === 1)
         && result.clients.some(client => client.username === "Guitarist" && client.aux === 8) ? result : null;
     }, "client identity and selected mixes");
+    const presence = client => client.messages.filter(message => message.presence).at(-1)?.presence;
+    await waitFor(() => presence(first)?.peers.some(peer => peer.nickname === "Guitarist"), "same AUX presence");
+    assert.deepEqual(presence(first).peers.map(peer => peer.nickname), ["Guitarist"]);
+    assert.deepEqual(presence(third).peers.map(peer => peer.nickname), ["Lead singer"]);
+    assert.deepEqual(presence(second).peers, []);
+    assert(!observer.messages.some(message => message.presence), "observers do not receive musician presence");
+    assert.deepEqual(Object.keys(presence(first).peers[0]).sort(), ["id", "nickname"]);
+    third.socket.send(JSON.stringify({ username: "New nickname" }));
+    await waitFor(() => presence(first)?.peers[0]?.nickname === "New nickname", "nickname presence update");
+    third.socket.send(JSON.stringify({ selectedAux: 1 }));
+    await waitFor(() => presence(first)?.peers.length === 0 && presence(second)?.peers[0]?.nickname === "New nickname", "AUX move presence");
+    third.socket.send(JSON.stringify({ username: "Guitarist" }));
+    third.socket.send(JSON.stringify({ selectedAux: 8 }));
+    await waitFor(() => presence(first)?.peers[0]?.nickname === "Guitarist" && presence(second)?.peers.length === 0, "presence after AUX return");
+    const visitor = await connect(base.replace("http:", "ws:")); clients.push(visitor);
+    visitor.socket.send(JSON.stringify({ username: "Visitor" }));
+    visitor.socket.send(JSON.stringify({ selectedAux: 8 }));
+    await waitFor(() => presence(first)?.peers.length === 2, "new peer joins");
+    visitor.socket.close();
+    await waitFor(() => presence(first)?.peers.length === 1, "peer leaves");
     assert.equal(dashboard.connections, 3, "observer sockets must not appear as mixer clients");
     assert.equal(new Set(dashboard.clients.map(client => client.id)).size, 3);
     assert.equal(dashboard.loaded, true);

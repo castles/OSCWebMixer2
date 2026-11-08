@@ -1,9 +1,8 @@
 CACHE MANIFEST
-# VERSION 70
+# VERSION 72
 
 index.html
 mixer.js
-templates.js
 identity.js
 icons.js
 icons.css

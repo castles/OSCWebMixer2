@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.7.0 — 2026-11-08
+
+Windows product version: **1.7.0**. Node package version: **2.9.0**.
+
+- Remove favourites, compact mode and fullscreen controls from the web mixer, including per-channel stars and old favourite filtering.
+- Replace Set all to 0 dB with Set all levels to off. After confirmation, set every enabled channel's send on the selected AUX to −∞ (−150 dB), cancel pending drags and leave pan unchanged.
+
+## 1.6.0 — 2026-11-08
+
+Windows product version: **1.6.0**. Node package version: **2.8.0**.
+
+- Keep the browser mixer as a limited alternative with an optional device-local nickname that saves automatically and identifies the live connection.
+- Remove template selection, template onboarding and profile wording from the browser mixer. Keep existing browser layouts and nicknames.
+- Keep shared template APIs and admin template management for the mobile app.
+
+## 1.5.0 — 2026-11-08
+
+Windows product version: **1.5.0**. Node package version: **2.7.0**.
+
+- Share other connected users and nicknames with clients on the same AUX, updating on join, leave, nickname and AUX changes. Exclude admin observers and all network addresses/activity logs.
+- Detect abandoned WebSocket connections with ping/pong so stale presence is removed.
+
+- Remove musician accounts, passwords, account APIs and admin account management.
+- Save nicknames automatically on the device; keep mixer layouts in local browser storage.
+- Stop opening the legacy musician database. Existing database files are preserved.
+
+- Advertise the installed service and demo using Bonjour/mDNS for discovery by native mobile clients.
+- Include the actual HTTP port, refresh advertisements on network changes, and withdraw them on shutdown.
+- Exclude common virtual and link-local adapters from automatic mixer links and QR codes.
+
 ## 1.4.0 — 2026-11-07
 
 Windows product version: **1.4.0**. Node package version: **2.6.0**.

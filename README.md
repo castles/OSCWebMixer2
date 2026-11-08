@@ -36,6 +36,14 @@ The default web port is **80**. The tray's browser links and QR code follow the 
 
 If your network has a DNS name for the mixer, enter it in **Admin → Overview → Mixer URL → Custom URL** and click **Save URL**. For example, `ears.glow.uk` becomes `http://ears.glow.uk/`; you can also enter a full HTTPS URL or include a port, such as `http://ears.glow.uk:8082`. The mixer link and QR codes in the dashboard and tray use this saved address after restarts. DNS must already resolve the name to the server; a DNS record alone does not change the web port. Clear the field and save to return to the server address.
 
+## Automatic discovery
+
+The Windows service and `npm run dev` advertise `_earsmixer._tcp.local` using Bonjour/mDNS. In a native EarsMixer app build, open **Connect → Nearby mixers** and select the server. The advertisement includes the actual web port, so the installed service and a demo on port 8082 appear separately. Account data is not advertised.
+
+Discovery uses UDP 5353 on the local network. The installer’s existing private-network firewall rule permits it. Guest Wi-Fi isolation, VLAN boundaries or blocked multicast can prevent discovery; manual addresses and QR codes still work. Set `OSC_WEBMIXER_DISCOVERY=0` in the server environment to disable advertisements. A server bound only to loopback does not advertise on the LAN.
+
+Advertised links and QR codes skip common virtual adapters, including Windows Hyper-V and WSL. With multiple physical networks, use **Overview → Mixer URL → Custom URL** to select the address for your musicians. Discovery advertises eligible physical interfaces and refreshes when addresses change.
+
 ## Use the service manager
 
 The tray icon appears in the notification area at the right of the Windows taskbar; it may be inside the hidden-icons menu.
@@ -50,11 +58,11 @@ The service is named **EarsMixer** in Windows Services. It starts automatically 
 
 ## Mixer and admin dashboard
 
-Musicians can choose list or grid views, reorder channels, save favourites and use compact or fullscreen controls. Guests keep their preferences on the current browser/device. Sign in to save a personal layout on the server and use it on another device.
+Musicians can choose list or grid views, reorder channels and set a local nickname. Preferences save on the current browser/device. Set all levels to off lowers every enabled channel’s send on the selected AUX to −∞ after confirmation; it does not toggle mute or change pan.
 
 To adjust a fader with a finger, mouse or pen, drag its handle. Tapping or swiping the fader track does not change the level, so you can scroll through the channels without jumping a fader. Keyboard and assistive-technology controls remain available.
 
-**Phone mixer** — compact mode keeps channel names, faders and favourites on one row, with the controls menu in the bottom-left corner:
+**Earlier web interface** — these screenshots show the previous interface, including controls removed from the current limited web mixer:
 
 <img src="docs/screenshots/mixer-phone.jpg" alt="EarsMixer in compact mode at phone size, with channel names, faders and favourites on one row" width="320">
 
@@ -72,17 +80,16 @@ Screenshots use the offline demo with sample console data. The mixer is shown at
 
 To protect the dashboard, open **Admin → Config** and set an admin password of at least eight characters. Musicians can still access the mixer, and the tray QR code continues to work. Restarting the server clears admin sign-in sessions, so administrators will need to sign in again.
 
-## Accounts and mobile app
+## Nicknames and local layouts
 
-Open **Mixer controls → Your profile → Create account** and choose a username and password. By default, your current layout is saved when you register. Sign in with that account on another browser or in the [EarsMixer mobile app](https://github.com/joeclack/EarsMixerApp) connected to the same server to restore it. No email, internet connection or separate database service is required.
+Musicians can enter an optional nickname in the mixer controls. It saves automatically on that device and identifies the live connection in the dashboard. No musician account or password is required.
 
-Accounts save your display name, selected AUX, channel order, favourites for each AUX, list/grid view and compact mode. Changes save automatically after you create or explicitly save a layout. Fader levels and pan are never saved or recalled by an account. If two devices edit the same layout, **Load saved layout** restores the server copy; **Keep this layout** explicitly replaces it. Signing out restores this device's guest layout.
+Selected AUX, channel order and view are saved in browser storage, separately for each server origin. The native mobile app keeps its own device-local settings. Clearing browser storage or uninstalling the app removes those layouts. In the browser, audio levels and pan come from the desk and are never recalled from a saved layout. The mobile app also supports separately saved AUX level states with confirmed recall.
 
-Accounts belong to the local EarsMixer server; they do not sync across independent servers. Use the same server address consistently to retain the device's sign-in cookie. Musician sessions last 30 days and survive a service restart. The mixer remains available to guests, and musician accounts do not grant admin access.
+The browser mixer is a limited alternative to the mobile app. Nicknames save automatically in browser storage and appear in live connection presence. Skipping the nickname is remembered. Templates can be selected in the mobile app and managed in the admin dashboard; the browser mixer has no template selection. The admin dashboard password still protects desk configuration.
 
-For a forgotten password, an administrator can open **Admin → Config → Musician accounts → Reset password**. Set an admin password first. Resetting a musician's password signs out all their devices and preserves the saved layout.
+Existing `earsmixer.sqlite` files from previous releases are left untouched but are no longer opened or used. They can be removed by the administrator after taking any desired backup.
 
-The mobile app is a client of this same Windows service. It remembers server addresses, scans the existing connection QR code and opens the mixer with the same account and layout controls. See its repository for Android preview installation and iPhone development/distribution instructions.
 
 ## Updates, settings and backups
 
@@ -93,13 +100,13 @@ Download and run the latest installer to update EarsMixer; you do not need to un
 Saved files are in `%PROGRAMDATA%\EarsMixer`:
 
 - `config/` — console connection, channel/AUX settings and shared desk presets.
-- `data/` — musician templates, the admin password record, and `earsmixer.sqlite` containing musician accounts, saved layouts and sign-in sessions.
+- `data/` — shared templates and the admin password record.
 - `plugins/` — optional custom plugins.
 - `logs/` — server and service logs.
 
 Upgrades and uninstall preserve these folders. To make a backup, stop the service from the tray, copy the EarsMixer data folder, then start the service again. Restoring files or adding plugins requires administrator permission.
 
-Copy the whole `data/` directory, including any `earsmixer.sqlite-wal` and `earsmixer.sqlite-shm` files. Keep the backup private: it includes password hashes and session records. The existing service data directory is used automatically; source deployments can set `OSC_WEBMIXER_DATA_DIR` to a persistent writable directory. Database schema upgrades run when the service starts.
+Copy the whole `data/` directory for backups. Keep backups private because they may contain admin password records and legacy account databases. Source deployments can set `OSC_WEBMIXER_DATA_DIR` to a persistent writable directory.
 
 The installer also migrates settings from earlier installations using the `OSCWebMixer2` folders, preserving the originals. Per-user settings are migrated from the account running setup; if you install using a different administrator account, copy the original user's settings manually.
 
@@ -114,7 +121,7 @@ The installer also migrates settings from earlier installations using the `OSCWe
 
 These instructions are for working on the source code. They are not required to install the released app.
 
-Install Node.js 22.13 or newer (with built-in SQLite) and Git, then run:
+Install Node.js 22.13 or newer and Git, then run:
 
 ```bash
 npm ci
@@ -140,3 +147,7 @@ Normal CI runs compile the installer and run the application tests, without inst
 ## Credits and licence
 
 EarsMixer is maintained by Joe Clack and is based on [OSCWebMixer2 by Marc Castles](https://github.com/castles/OSCWebMixer2). The project is distributed under the [MIT licence](LICENSE).
+
+## AUX presence for native clients
+
+The server sends `{ "presence": { "aux": 2, "peers": [{ "id": "7", "nickname": "Joe" }] } }` over the existing mixer WebSocket. Each list includes only other open musician connections on the selected AUX. It updates after AUX selection, nickname changes, joins and disconnects; an empty list clears the display. Admin observer connections are excluded. IDs last for that connection and nicknames may be null. The mobile app displays profile circles; existing web clients continue to work.

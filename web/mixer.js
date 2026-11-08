@@ -5,8 +5,7 @@ const auxSelect = document.getElementById("aux");
 const panModeButton = document.getElementById("panMode");
 let panMode = false;
 const sendParameter = () => panMode ? "send_pan" : "send_level";
-const favourites = document.getElementById("favourites");
-const zeroAllChannelsButton = document.getElementById("zeroAllChannels");
+const setAllLevelsOffButton = document.getElementById("setAllLevelsOff");
 const editLayoutButton = document.getElementById("editLayout");
 const layoutHint = document.getElementById("layoutHint");
 const layoutEditor = document.getElementById("layoutEditor");
@@ -20,7 +19,6 @@ let queryGeneration = 0;
 let editingLayout = false;
 let channelSorter = null;
 let mixerConfigReady = false;
-let defaultChannelOrder = [];
 const channelElements = new Map();
 const pendingWrites = new Map();
 const mixerStatus = document.getElementById("mixerStatus");
@@ -47,65 +45,15 @@ controlsToggle.addEventListener("click", () => setControlsOpen(!controlsOpen));
 controlsBackdrop.addEventListener("click", () => setControlsOpen(false, true));
 controlsFan.addEventListener("click", event => {
   const button = event.target.closest("button");
-  if (button) setControlsOpen(false, button.id !== "editUsername");
+  if (button) setControlsOpen(false, button.id !== "editNickname");
 });
-document.getElementById("profileDialog").addEventListener("close", () => controlsToggle.focus());
-favourites.addEventListener("change", () => setControlsOpen(false, true));
+document.getElementById("nicknameDialog").addEventListener("close", () => controlsToggle.focus());
 document.addEventListener("focusin", event => {
   if (controlsOpen && !mixerControls.contains(event.target)) setControlsOpen(false);
 });
 
-const enterFullscreenButton = document.getElementById("enterFullscreen");
-const exitFullscreenButton = document.getElementById("exitFullscreen");
-
-function setFullscreenMode(active) {
-  document.body.classList.toggle("fullscreen-mode", active);
-  enterFullscreenButton.hidden = active;
-  exitFullscreenButton.hidden = !active;
-  setControlsOpen(false);
-  controlsToggle.focus();
-}
-
-enterFullscreenButton.addEventListener("click", async () => {
-  // Finish reordering before entering the mixer-only view.
-  if (editingLayout) editLayoutButton.click();
-  enterFullscreenButton.disabled = true;
-  try {
-    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
-      await document.documentElement.requestFullscreen();
-    }
-    setFullscreenMode(true);
-  } catch {
-    // Mobile browsers may not allow native fullscreen; still offer the mixer-only view.
-    setFullscreenMode(true);
-  } finally {
-    enterFullscreenButton.disabled = false;
-  }
-});
-
-async function exitFullscreenMode() {
-  exitFullscreenButton.disabled = true;
-  try {
-    if (document.fullscreenElement) await document.exitFullscreen();
-    setFullscreenMode(false);
-  } catch {
-    // Leave the exit control available if the browser refuses to exit.
-  } finally {
-    exitFullscreenButton.disabled = false;
-  }
-}
-
-exitFullscreenButton.addEventListener("click", exitFullscreenMode);
-document.addEventListener("fullscreenchange", () => setFullscreenMode(Boolean(document.fullscreenElement)));
 document.addEventListener("keydown", event => {
-  if (event.key === "Escape" && controlsOpen) {
-    event.preventDefault();
-    setControlsOpen(false, true);
-    return;
-  }
-  if (event.key === "Escape" && document.body.classList.contains("fullscreen-mode") && !document.fullscreenElement) {
-    exitFullscreenMode();
-  }
+  if (event.key === "Escape" && controlsOpen) { event.preventDefault(); setControlsOpen(false, true); }
 });
 
 
@@ -133,7 +81,7 @@ function sendOSC(address, args = []) {
 }
 
 function updateMixStatus() {
-  zeroAllChannelsButton.disabled = !canZeroAllChannels();
+  setAllLevelsOffButton.disabled = !canSetAllLevelsOff();
   if (!ws || ws.readyState !== WebSocket.OPEN) { mixerStatus.textContent = "Connecting…"; return; }
   if (!mixerConfigReady) { mixerStatus.textContent = "Loading channels…"; return; }
   if (!auxSelect.value) { mixerStatus.textContent = "No mixes enabled"; return; }
@@ -168,21 +116,21 @@ function updateLevel(slider, level, db = null) {
   slider.setAttribute("aria-valuetext", valid ? Math.round(value * 100) + " percent, " + (decibels <= -150 ? "off" : dbText + " decibels") : "Not loaded");
 }
 
-function canZeroAllChannels() {
-  return !panMode && !editingLayout && ws?.readyState === WebSocket.OPEN && Boolean(auxSelect.value) && channelElements.size > 0 &&
+function canSetAllLevelsOff() {
+  return !editingLayout && ws?.readyState === WebSocket.OPEN && Boolean(auxSelect.value) && channelElements.size > 0 &&
     Array.from(channelElements.values()).every(({ slider }) => slider.dataset.ready === "true");
 }
 
-zeroAllChannelsButton.addEventListener("click", () => {
-  if (!canZeroAllChannels()) return;
+setAllLevelsOffButton.addEventListener("click", () => {
+  if (!canSetAllLevelsOff()) return;
   const aux = auxSelect.value;
   const name = auxSelect.selectedOptions[0]?.textContent || "AUX " + aux;
-  if (!confirm('Set all ' + channelElements.size + ' enabled channels in “' + name + '” to 0 dB? This includes channels hidden by Favourites and may raise quiet or off sends.')) return;
-  if (aux !== auxSelect.value || !canZeroAllChannels()) return;
+  if (!confirm('Set all ' + channelElements.size + ' channels in “' + name + '” to off (−∞ dB)?')) return;
+  if (aux !== auxSelect.value || !canSetAllLevelsOff()) return;
   clearPendingWrites();
   for (const { slider } of channelElements.values()) {
-    if (sendOSC("/Input_Channels/" + slider.dataset.channel + "/Aux_Send/" + aux + "/send_level", [0])) {
-      updateLevel(slider, dbToSlider(0), 0);
+    if (sendOSC("/Input_Channels/" + slider.dataset.channel + "/Aux_Send/" + aux + "/send_level", [-150])) {
+      if (!panMode) updateLevel(slider, 0, -150);
     }
   }
 });
@@ -303,21 +251,9 @@ function requestValues({ preserveValues = false } = {}) {
   queryMissing();
 }
 
-function applyFavourites() {
-  let visible = 0;
-  for (const row of channelsDiv.children) {
-    row.hidden = !editingLayout && favourites.checked && !row.querySelector('input[name="fav[]"]').checked;
-    if (!row.hidden) visible++;
-  }
-  emptyChannels.hidden = visible > 0 || editingLayout;
-  emptyChannels.textContent = channelsDiv.children.length ? "No favourites yet. Turn off Favourites to star channels." : "No channels configured for this mixer.";
-}
-
-function restoreFavourites() {
-  const saved = (localStorage.getItem("aux" + auxSelect.value + "fav") || "").split(",");
-  favourites.checked = localStorage.getItem("aux" + auxSelect.value + "favChecked") === "true";
-  for (const checkbox of channelsDiv.querySelectorAll('input[name="fav[]"]')) checkbox.checked = saved.includes(checkbox.value);
-  applyFavourites();
+function updateEmptyChannels() {
+  emptyChannels.hidden = channelsDiv.children.length > 0 || editingLayout;
+  emptyChannels.textContent = "No channels configured for this mixer.";
 }
 
 function onMessage(event) {
@@ -329,7 +265,6 @@ function onMessage(event) {
     buildChannels(Array.isArray(json.config.channels) ? json.config.channels : []);
     updateSnapshot(json.config.snapshot);
     buildAux(Array.isArray(json.config.aux) ? json.config.aux : []);
-    document.dispatchEvent(new Event("mixer-config-ready"));
     return;
   }
   if (typeof json.address !== "string" || !Array.isArray(json.args)) return;
@@ -356,7 +291,6 @@ function onMessage(event) {
       controls.name.title = name;
       controls.slider.setAttribute("aria-label", name + (panMode ? " send pan" : " send level"));
       controls.handle.setAttribute("aria-label", "Move " + name);
-      controls.checkbox.setAttribute("aria-label", "Favourite " + name);
     }
   }
   const auxMatch = json.address.match(/^\/Aux_Outputs\/(\d+)\/Buss_Trim\/name$/);
@@ -395,7 +329,6 @@ function buildAux(options) {
 
 function buildChannels(channels) {
   channels = channels.filter(channel => channel.enabled !== false).sort((a, b) => (a.order ?? a.channel) - (b.order ?? b.channel));
-  defaultChannelOrder = channels.map(channel => String(channel.channel));
   if (channelSorter) channelSorter.destroy();
   clearPendingWrites();
   channelElements.clear();
@@ -404,7 +337,7 @@ function buildChannels(channels) {
     const row = document.createElement("div");
     row.className = "channel-card";
     row.dataset.channel = String(channel.channel);
-    row.innerHTML = '<button type="button" class="drag-handle" title="Drag to reorder">' + appIcon("gripVertical") + '</button><div class="channel-header"><span class="channel-name"></span><div class="fader-control"><input class="fader volumeInput" type="range" min="0" max="1" step="0.001" value="0" disabled><span class="fader-thumb" aria-hidden="true"></span></div><output class="level-readout">—</output><label class="favourite"><input type="checkbox" name="fav[]">' + appIcon("star") + '</label></div>';
+    row.innerHTML = '<button type="button" class="drag-handle" title="Drag to reorder">' + appIcon("gripVertical") + '</button><div class="channel-header"><span class="channel-name"></span><div class="fader-control"><input class="fader volumeInput" type="range" min="0" max="1" step="0.001" value="0" disabled><span class="fader-thumb" aria-hidden="true"></span></div><output class="level-readout">—</output></div>';
     const name = channel.label || "Channel " + channel.channel;
     row.querySelector(".channel-name").textContent = name;
     row.querySelector(".channel-name").title = name;
@@ -416,13 +349,10 @@ function buildChannels(channels) {
     const thumb = row.querySelector(".fader-thumb");
     const cancelDrag = bindFaderHandle(slider, thumb);
     for (const event of ["change", "keyup", "blur"]) slider.addEventListener(event, () => flushSlider(slider));
-    const checkbox = row.querySelector('input[name="fav[]"]');
-    checkbox.value = String(channel.channel);
-    checkbox.setAttribute("aria-label", "Favourite " + name);
     const handle = row.querySelector(".drag-handle");
     handle.setAttribute("aria-label", "Move " + name);
     handle.addEventListener("keydown", moveChannelWithKeys);
-    channelElements.set(String(channel.channel), { row, slider, thumb, cancelDrag, checkbox, handle, name: row.querySelector(".channel-name"), readout: row.querySelector(".level-readout") });
+    channelElements.set(String(channel.channel), { row, slider, thumb, cancelDrag, handle, name: row.querySelector(".channel-name"), readout: row.querySelector(".level-readout") });
     channelsDiv.appendChild(row);
   }
   restoreChannelOrder();
@@ -436,6 +366,7 @@ function buildChannels(channels) {
   });
   updateSortingMode();
   updateLayoutInputs();
+  updateEmptyChannels();
 }
 
 function restoreChannelOrder() {
@@ -449,7 +380,6 @@ function restoreChannelOrder() {
 
 function saveChannelOrder() {
   localStorage.setItem("channelLayout", JSON.stringify(Array.from(channelsDiv.children, row => row.dataset.channel)));
-  document.dispatchEvent(new Event("mixer-preferences-changed"));
 
 }
 
@@ -480,34 +410,18 @@ panModeButton.addEventListener("click", () => {
 });
 
 function updateLayoutInputs() {
-  zeroAllChannelsButton.disabled = !canZeroAllChannels();
+  setAllLevelsOffButton.disabled = !canSetAllLevelsOff();
   const connected = ws && ws.readyState === WebSocket.OPEN;
   editLayoutButton.disabled = !channelsDiv.children.length;
   panModeButton.disabled = editingLayout || !channelsDiv.children.length;
-  favourites.disabled = editingLayout || !channelsDiv.children.length;
   for (const { slider } of channelElements.values()) slider.disabled = editingLayout || !connected || slider.dataset.ready !== "true";
-  for (const checkbox of channelsDiv.querySelectorAll('input[name="fav[]"]')) checkbox.disabled = editingLayout;
 }
 
 auxSelect.addEventListener("change", () => {
   localStorage.setItem("aux", auxSelect.value);
   const option = auxSelect.selectedOptions[0];
   if (option) document.body.style.setProperty("--tint", option.dataset.colour);
-  restoreFavourites(); requestValues();
-  document.dispatchEvent(new Event("mixer-preferences-changed"));
-
-});
-favourites.addEventListener("change", () => {
-  localStorage.setItem("aux" + auxSelect.value + "favChecked", String(favourites.checked));
-  applyFavourites();
-  document.dispatchEvent(new Event("mixer-preferences-changed"));
-
-});
-channelsDiv.addEventListener("change", event => {
-  if (event.target.name !== "fav[]") return;
-  localStorage.setItem("aux" + auxSelect.value + "fav", Array.from(channelsDiv.querySelectorAll('input[name="fav[]"]:checked'), checkbox => checkbox.value).join(","));
-  applyFavourites();
-  document.dispatchEvent(new Event("mixer-preferences-changed"));
+  updateEmptyChannels(); requestValues();
 
 });
 function setEditingLayout(active) {
@@ -521,7 +435,7 @@ function setEditingLayout(active) {
   updateSortingMode();
   document.getElementById("listView").disabled = editingLayout;
   document.getElementById("gridView").disabled = editingLayout;
-  updateLayoutInputs(); applyFavourites();
+  updateLayoutInputs(); updateEmptyChannels();
 }
 editLayoutButton.addEventListener("click", () => setEditingLayout(!editingLayout));
 doneLayoutButton.addEventListener("click", () => {
@@ -534,7 +448,7 @@ function startWebsocket() {
   clearTimeout(connectionTimer);
   ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host);
   const socket = ws;
-  socket.onopen = () => { if (ws === socket) { clearTimeout(connectionTimer); setConnectionStatus(true); sendDeviceUsername(socket); } };
+  socket.onopen = () => { if (ws === socket) { clearTimeout(connectionTimer); setConnectionStatus(true); sendDeviceNickname(socket); } };
   socket.onmessage = event => { if (ws === socket) onMessage(event); };
   socket.onerror = () => socket.close();
   socket.onclose = () => {
@@ -550,7 +464,7 @@ function startWebsocket() {
   connectionTimer = setTimeout(() => { if (ws === socket && socket.readyState === WebSocket.CONNECTING) socket.close(); }, 3000);
 }
 startWebsocket();
-document.addEventListener("device-username-changed", () => sendDeviceUsername(ws));
+document.addEventListener("device-nickname-changed", () => sendDeviceNickname(ws));
 
 const listViewButton = document.getElementById("listView");
 const gridViewButton = document.getElementById("gridView");
@@ -560,24 +474,10 @@ function setChannelView(view) {
   listViewButton.setAttribute("aria-pressed", String(!grid));
   gridViewButton.setAttribute("aria-pressed", String(grid));
   updateSortingMode();
-  document.dispatchEvent(new Event("mixer-preferences-changed"));
 }
 listViewButton.addEventListener("click", () => { localStorage.setItem("channelView", "list"); setChannelView("list"); });
 gridViewButton.addEventListener("click", () => { localStorage.setItem("channelView", "grid"); setChannelView("grid"); });
 setChannelView(localStorage.getItem("channelView") || "list");
-
-const compactModeButton = document.getElementById("compactMode");
-function setCompactMode(compact) {
-  document.body.classList.toggle("compact-mode", compact);
-  compactModeButton.setAttribute("aria-pressed", String(compact));
-  document.dispatchEvent(new Event("mixer-preferences-changed"));
-}
-compactModeButton.addEventListener("click", () => {
-  const compact = !document.body.classList.contains("compact-mode");
-  localStorage.setItem("compactMode", String(compact));
-  setCompactMode(compact);
-});
-setCompactMode(localStorage.getItem("compactMode") === "true");
 
 function isGridLayout() {
   return document.body.classList.contains("grid-view") && window.matchMedia("(min-width: 700px)").matches;
