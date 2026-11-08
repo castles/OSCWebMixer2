@@ -14,7 +14,7 @@
       name="apple-mobile-web-app-status-bar-style"
       content="black"
     />
-    <link rel="stylesheet" href="mixer.min.css?v=2.6.0" />
+    <link rel="stylesheet" href="mixer.min.css?v=2.8.0" />
     <link rel="shortcut icon" href="/images/favicon.ico" type="image/x-icon" />
     <link rel="apple-touch-icon" href="/images/apple-touch-icon.png" />
     <link
@@ -81,7 +81,7 @@
         <label class="favourites-toggle fan-action fan-favourites"><input id="favourites" type="checkbox"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#star"></use></svg><span>Favourites</span></label>
         <button id="editLayout" class="fan-action fan-edit" type="button" aria-pressed="false" disabled><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#pencil"></use></svg><span>Edit layout</span></button>
         <button id="panMode" class="fan-action fan-pan" type="button" aria-pressed="false"><strong>Pan</strong></button>
-        <button id="editUsername" class="fan-action fan-profile" type="button" title="Open profile" aria-label="Open profile"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#userRound"></use></svg><span id="deviceUsernameLabel">Profile</span></button>
+        <button id="editNickname" class="fan-action fan-nickname" type="button" title="Nickname" aria-label="Set nickname"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#userRound"></use></svg><span id="nicknameLabel">Nickname</span></button>
         <div class="view-toggle" role="group" aria-label="Channel view">
           <button id="listView" type="button" aria-label="List view" title="List view" aria-pressed="true"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#list"></use></svg></button>
           <button id="gridView" type="button" aria-label="Grid view" title="Grid view" aria-pressed="false"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#grid2x2"></use></svg></button>
@@ -96,19 +96,17 @@
       <div id="channels"></div>
       <p id="emptyChannels" hidden>No favourites yet. Turn off Favourites to star channels.</p>
     </main>
-    <dialog id="profileDialog" class="settings-dialog" aria-labelledby="profileTitle">
-      <div class="settings-dialog-header"><div><h2 id="profileTitle">Your profile</h2></div><button id="closeProfile" type="button" aria-label="Close profile"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#x"></use></svg></button></div>
-      <form id="usernameForm" class="settings-section"><label for="deviceUsername">Nickname</label><input id="deviceUsername" maxlength="80" autocomplete="nickname"><p id="usernameError" class="settings-detail" role="alert"></p><p id="usernameSaved" class="settings-detail" role="status" hidden></p><div class="dialog-actions"><button type="submit">Done</button><button id="skipUsername" type="button" hidden>Skip for now</button></div></form>
-      <div id="profileTemplates">
-      <section class="settings-section"><p id="layoutDescription" class="settings-detail">Choose a pre-made layout designed for your role, with the most relevant channels at the top so they’re easy to find.</p><label for="savedTemplate">Template</label><select id="savedTemplate" aria-describedby="layoutDescription" disabled><option value="">Loading templates…</option></select><p id="templateUpdated" class="settings-detail"></p><button id="loadTemplate" type="button" disabled><svg class="app-icon" width="20" height="20" aria-hidden="true"><use href="vendor/lucide.svg#download"></use></svg>Load template</button><button id="retryTemplates" type="button" hidden>Retry loading templates</button></section>
-      <section class="settings-section"><p class="settings-detail">Starting fresh resets your layout and favourites. Settings stay on this device. Fader levels are never recalled.</p><button id="startFresh" type="button">Start fresh</button></section>
-      <p id="templateMessage" role="status" aria-live="polite"></p>
-      </div>
+    <dialog id="nicknameDialog" class="settings-dialog" aria-labelledby="nicknameTitle">
+      <div class="settings-dialog-header"><h2 id="nicknameTitle">Nickname</h2><button id="closeNickname" type="button" aria-label="Close nickname"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#x"></use></svg></button></div>
+      <form id="nicknameForm" class="settings-section">
+        <label for="nickname">Nickname</label><input id="nickname" maxlength="80" autocomplete="nickname">
+        <p id="nicknameError" class="settings-detail" role="alert"></p>
+        <div class="dialog-actions"><button type="submit">Done</button><button id="skipNickname" type="button" hidden>Skip</button></div>
+      </form>
     </dialog>
     <script src="vendor/Sortable.min.js"></script>
     <script src="icons.js"></script>
-    <script src="identity.js"></script>
-    <script src="mixer.min.js?v=2.6.0"></script>
-    <script src="templates.js"></script>
+    <script src="identity.js?v=2.8.0"></script>
+    <script src="mixer.min.js?v=2.8.0"></script>
   </body>
 </html>

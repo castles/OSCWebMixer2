@@ -84,9 +84,9 @@ To protect the dashboard, open **Admin → Config** and set an admin password of
 
 Musicians can enter an optional nickname in the mixer controls. It saves automatically on that device and identifies the live connection in the dashboard. No musician account or password is required.
 
-Selected AUX, channel order, favourites, view and compact mode are saved in browser storage, separately for each server origin. The native mobile app keeps its own device-local settings. Clearing browser storage or uninstalling the app removes those layouts. Audio levels and pan always come from the desk and are never recalled from a saved layout.
+Selected AUX, channel order, favourites, view and compact mode are saved in browser storage, separately for each server origin. The native mobile app keeps its own device-local settings. Clearing browser storage or uninstalling the app removes those layouts. In the browser, audio levels and pan come from the desk and are never recalled from a saved layout. The mobile app also supports separately saved AUX level states with confirmed recall.
 
-Shared desk templates remain available. The admin dashboard password still protects desk configuration.
+The browser mixer is a limited alternative to the mobile app. Nicknames save automatically in browser storage and appear in live connection presence. Skipping the nickname is remembered. Templates can be selected in the mobile app and managed in the admin dashboard; the browser mixer has no template selection. The admin dashboard password still protects desk configuration.
 
 Existing `earsmixer.sqlite` files from previous releases are left untouched but are no longer opened or used. They can be removed by the administrator after taking any desired backup.
 

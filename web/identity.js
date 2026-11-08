@@ -1,62 +1,64 @@
 "use strict";
-const profileDialog = document.getElementById("profileDialog");
-const usernameInput = document.getElementById("deviceUsername");
-let usernameOnboarding = false;
-function getDeviceUsername() { return localStorage.getItem("deviceUsername") || null; }
-function sendDeviceUsername(socket) {
-  if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ username: getDeviceUsername() }));
+const nicknameDialog = document.getElementById("nicknameDialog");
+const nicknameInput = document.getElementById("nickname");
+const nicknameError = document.getElementById("nicknameError");
+const nicknameSetupKey = "earsmixer.nickname-setup.v1";
+function getDeviceNickname() {
+  try { return localStorage.getItem("deviceUsername") || null; } catch { return null; }
 }
-function updateUsernameLabel() {
-  const name = getDeviceUsername();
-  document.getElementById("deviceUsernameLabel").textContent = name || "Nickname";
-  document.getElementById("editUsername").setAttribute("aria-label", name ? "Open profile for " + name : "Open profile");
+function sendDeviceNickname(socket) {
+  // Keep the existing wire field so web and native clients share the same presence protocol.
+  if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ username: getDeviceNickname() }));
 }
-function finishUsernameChoice() { usernameOnboarding = false; profileDialog.close(); document.dispatchEvent(new Event("device-username-ready")); }
-function prepareUsernameForm() {
-  usernameInput.value = getDeviceUsername() || "";
-  document.getElementById("usernameError").textContent = "";
-  document.getElementById("usernameSaved").hidden = true;
-  document.getElementById("skipUsername").hidden = !usernameOnboarding;
+function updateNicknameLabel() {
+  const name = getDeviceNickname();
+  document.getElementById("nicknameLabel").textContent = name || "Nickname";
+  document.getElementById("editNickname").setAttribute("aria-label", name ? "Edit nickname: " + name : "Set nickname");
 }
-function openUsernameDialog() {
-  usernameOnboarding = true; prepareUsernameForm();
-  document.getElementById("profileTitle").textContent = "Nickname";
-  document.getElementById("usernameForm").hidden = false;
-  document.getElementById("profileTemplates").hidden = true;
-  document.getElementById("closeProfile").hidden = false;
-  profileDialog.showModal();
+function openNicknameDialog(onboarding = false) {
+  nicknameInput.value = getDeviceNickname() || "";
+  nicknameError.textContent = "";
+  document.getElementById("skipNickname").hidden = !onboarding;
+  nicknameDialog.showModal();
 }
-document.getElementById("editUsername").addEventListener("click", () => {
-  usernameOnboarding = false; prepareUsernameForm();
-  document.getElementById("usernameForm").hidden = false;
-  document.getElementById("profileTemplates").hidden = false;
-  document.getElementById("profileTitle").textContent = "Device settings";
-  profileDialog.showModal(); document.dispatchEvent(new Event("profile-opened"));
-});
-document.getElementById("closeProfile").addEventListener("click", () => { if (usernameOnboarding) finishUsernameChoice(); else profileDialog.close(); });
-document.getElementById("skipUsername").addEventListener("click", finishUsernameChoice);
+function finishNicknameSetup() {
+  try { localStorage.setItem(nicknameSetupKey, "true"); } catch {}
+  nicknameDialog.close();
+}
 function saveNickname() {
-  const name = usernameInput.value.normalize("NFKC").trim().replace(/\s+/g, " ");
+  const name = nicknameInput.value.normalize("NFKC").trim().replace(/\s+/g, " ");
   if (name.length > 80 || /[\x00-\x1f\x7f]/.test(name)) {
-    document.getElementById("usernameError").textContent = "Use up to 80 characters.";
-    return;
+    nicknameError.textContent = "Use up to 80 characters.";
+    return false;
   }
   try {
     if (name) localStorage.setItem("deviceUsername", name);
     else localStorage.removeItem("deviceUsername");
-    document.getElementById("usernameError").textContent = "";
-    updateUsernameLabel();
-    document.dispatchEvent(new Event("device-username-changed"));
-  } catch { document.getElementById("usernameError").textContent = "Could not save to this device."; }
+    nicknameError.textContent = "";
+    updateNicknameLabel();
+    document.dispatchEvent(new Event("device-nickname-changed"));
+    return true;
+  } catch { nicknameError.textContent = "Could not save to this device."; return false; }
 }
-usernameInput.addEventListener("input", saveNickname);
-profileDialog.addEventListener("cancel", event => { if (usernameOnboarding) { event.preventDefault(); finishUsernameChoice(); } });
-document.getElementById("usernameForm").addEventListener("submit", event => {
-  event.preventDefault(); saveNickname();
-  if (usernameOnboarding) finishUsernameChoice(); else profileDialog.close();
+document.getElementById("editNickname").addEventListener("click", () => openNicknameDialog());
+document.getElementById("closeNickname").addEventListener("click", finishNicknameSetup);
+document.getElementById("skipNickname").addEventListener("click", finishNicknameSetup);
+nicknameInput.addEventListener("input", saveNickname);
+nicknameDialog.addEventListener("cancel", event => { event.preventDefault(); finishNicknameSetup(); });
+document.getElementById("nicknameForm").addEventListener("submit", event => {
+  event.preventDefault();
+  if (saveNickname()) finishNicknameSetup();
 });
 window.addEventListener("storage", event => {
-  if (event.key === "deviceUsername" || event.key === null) { updateUsernameLabel(); document.dispatchEvent(new Event("device-username-changed")); }
+  if (event.key === "deviceUsername" || event.key === null) {
+    updateNicknameLabel();
+    if (nicknameDialog.open) nicknameInput.value = getDeviceNickname() || "";
+    document.dispatchEvent(new Event("device-nickname-changed"));
+  }
 });
-updateUsernameLabel();
-if (!getDeviceUsername()) openUsernameDialog();
+// Remove obsolete selection metadata without changing the current channel layout.
+try { for (const key of ["profileId", "profileName", "profilePending", "templateChoice"]) localStorage.removeItem(key); } catch {}
+updateNicknameLabel();
+let nicknameSetupComplete = false;
+try { nicknameSetupComplete = localStorage.getItem(nicknameSetupKey) === "true"; } catch {}
+if (!getDeviceNickname() && !nicknameSetupComplete) openNicknameDialog(true);

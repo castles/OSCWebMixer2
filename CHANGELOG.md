@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.0 — 2026-11-08
+
+Windows product version: **1.6.0**. Node package version: **2.8.0**.
+
+- Keep the browser mixer as a limited alternative with an optional device-local nickname that saves automatically and identifies the live connection.
+- Remove template selection, template onboarding and profile wording from the browser mixer. Keep existing browser layouts and nicknames.
+- Keep shared template APIs and admin template management for the mobile app.
+
 ## 1.5.0 — 2026-11-08
 
 Windows product version: **1.5.0**. Node package version: **2.7.0**.

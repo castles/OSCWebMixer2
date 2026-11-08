@@ -51,6 +51,8 @@ class Control {
     this.listeners.get(type).push(listener);
   }
   dispatchEvent(event) { for (const listener of this.listeners.get(event.type) || []) listener.call(this, event); }
+  showModal() { this.open = true; }
+  close() { this.open = false; this.dispatchEvent({ type: "close" }); }
   focus() {}
   getBoundingClientRect() { return { width: 228 }; }
   setPointerCapture(id) { this.pointerId = id; }
@@ -58,9 +60,10 @@ class Control {
   releasePointerCapture() { this.pointerId = null; }
 }
 
-function createMixer(source = mixerSource) {
+function createMixer(source = mixerSource, storage = new Map()) {
   const controls = new Map();
-  const storage = new Map();
+  const documentEvents = new Control();
+  const windowEvents = new Control();
   const timers = new Map();
   let now = 0;
   let nextTimerId = 0;
@@ -79,8 +82,8 @@ function createMixer(source = mixerSource) {
       return controls.get(id);
     },
     createElement: tag => new Control(tag),
-    addEventListener() {},
-    dispatchEvent() {},
+    addEventListener: (...args) => documentEvents.addEventListener(...args),
+    dispatchEvent: event => documentEvents.dispatchEvent(event),
   };
   const context = vm.createContext({
     document,
@@ -96,9 +99,9 @@ function createMixer(source = mixerSource) {
     Sortable: class { destroy() {} option() {} },
     Event: class { constructor(type) { this.type = type; } },
     location: { protocol: "http:", host: "localhost" },
-    window: { matchMedia: () => ({ matches: false, addEventListener() {} }) },
+    window: { addEventListener: (...args) => windowEvents.addEventListener(...args), matchMedia: () => ({ matches: false, addEventListener() {} }) },
     appIcon: () => "",
-    sendDeviceUsername() {},
+    sendDeviceNickname() {},
     setTimeout(callback, delay = 0) { const id = ++nextTimerId; timers.set(id, { callback, due: now + delay }); return id; },
     clearTimeout: id => timers.delete(id),
   });
@@ -125,18 +128,43 @@ function createMixer(source = mixerSource) {
   return { controls, run, message, slider, socket, tick, level, writes: () => socket().sent.filter(message => /\/send_level$/.test(message.address || "")) };
 }
 
-test("production minified mixer supports personal templates without writing desk values", () => {
-  const mixer = createMixer(fs.readFileSync(path.join(__dirname, "../web/mixer.min.js"), "utf8"));
-  mixer.run("var profileDialog = document.getElementById('profileDialog'); localStorage.setItem('templateChoice', JSON.stringify({type:'fresh'}));");
-  mixer.run(fs.readFileSync(path.join(__dirname, "../web/templates.js"), "utf8"));
-  mixer.run("applyLocalTemplate({selectedAux:4,channelOrder:[65,2],favouritesByAux:{4:{channels:[65],enabled:true}},view:'grid'})");
-  assert.deepEqual(mixer.controls.get("channels").children.map(row => row.dataset.channel), ["65", "2"]);
-  assert.equal(mixer.controls.get("aux").value, "4");
-  assert.equal(mixer.controls.get("gridView").attributes["aria-pressed"], "true");
-  assert.equal(mixer.run("localStorage.getItem('aux4fav')"), "65");
-  assert.equal(mixer.run("localStorage.getItem('aux4favChecked')"), "true");
+test("production mixer autosaves a local nickname, shares it live and has no template flow", () => {
+  const storage = new Map([["profileId", "old"], ["templateChoice", "old template"], ["channelLayout", "[65,2]"]]);
+  const source = fs.readFileSync(path.join(__dirname, "../web/mixer.min.js"), "utf8");
+  const identity = fs.readFileSync(path.join(__dirname, "../web/identity.js"), "utf8");
+  const mixer = createMixer(source, storage);
+  mixer.run(identity);
+  assert.equal(mixer.controls.get("nicknameDialog").open, true);
+  const nickname = mixer.controls.get("nickname");
+  nickname.value = "  Joe   Drums  "; nickname.dispatchEvent({ type: "input" });
+  assert.equal(storage.get("deviceUsername"), "Joe Drums");
+  assert.equal(mixer.controls.get("nicknameLabel").textContent, "Joe Drums");
+  assert.equal(mixer.socket().sent.at(-1).username, "Joe Drums");
+  assert.equal(storage.get("channelLayout"), "[65,2]");
+  assert.equal(storage.has("profileId"), false); assert.equal(storage.has("templateChoice"), false);
   assert.equal(mixer.writes().length, 0);
-  assert.equal(mixer.socket().sent.at(-2)?.selectedAux, 4);
+  mixer.controls.get("closeNickname").dispatchEvent({ type: "click" });
+  const next = createMixer(source, storage); next.run(identity);
+  assert.notEqual(next.controls.get("nicknameDialog").open, true);
+  assert.equal(next.controls.get("nicknameLabel").textContent, "Joe Drums");
+  const html = fs.readFileSync(path.join(__dirname, "../web/index.html"), "utf8");
+  assert(!/templates\.js|savedTemplate|loadTemplate|startFresh|profileDialog/.test(html));
+});
+
+test("skipping a nickname is remembered; invalid nicknames stay open and do not overwrite stored data", () => {
+  const storage = new Map();
+  const identity = fs.readFileSync(path.join(__dirname, "../web/identity.js"), "utf8");
+  const mixer = createMixer(mixerSource, storage); mixer.run(identity);
+  mixer.controls.get("skipNickname").dispatchEvent({ type: "click" });
+  const next = createMixer(mixerSource, storage); next.run(identity);
+  assert.notEqual(next.controls.get("nicknameDialog").open, true);
+  next.controls.get("editNickname").dispatchEvent({ type: "click" });
+  next.controls.get("nickname").value = "x".repeat(81);
+  next.controls.get("nicknameForm").dispatchEvent({ type: "submit", preventDefault() {} });
+  assert.equal(next.controls.get("nicknameDialog").open, true);
+  assert.equal(storage.has("deviceUsername"), false);
+  assert.equal(next.controls.get("nicknameError").textContent, "Use up to 80 characters.");
+  assert.equal(next.writes().length, 0);
 });
 
 test("mixer filters enabled controls, sorts configured order and queries actual channel IDs", () => {

@@ -20,7 +20,6 @@ let queryGeneration = 0;
 let editingLayout = false;
 let channelSorter = null;
 let mixerConfigReady = false;
-let defaultChannelOrder = [];
 const channelElements = new Map();
 const pendingWrites = new Map();
 const mixerStatus = document.getElementById("mixerStatus");
@@ -47,9 +46,9 @@ controlsToggle.addEventListener("click", () => setControlsOpen(!controlsOpen));
 controlsBackdrop.addEventListener("click", () => setControlsOpen(false, true));
 controlsFan.addEventListener("click", event => {
   const button = event.target.closest("button");
-  if (button) setControlsOpen(false, button.id !== "editUsername");
+  if (button) setControlsOpen(false, button.id !== "editNickname");
 });
-document.getElementById("profileDialog").addEventListener("close", () => controlsToggle.focus());
+document.getElementById("nicknameDialog").addEventListener("close", () => controlsToggle.focus());
 favourites.addEventListener("change", () => setControlsOpen(false, true));
 document.addEventListener("focusin", event => {
   if (controlsOpen && !mixerControls.contains(event.target)) setControlsOpen(false);
@@ -329,7 +328,6 @@ function onMessage(event) {
     buildChannels(Array.isArray(json.config.channels) ? json.config.channels : []);
     updateSnapshot(json.config.snapshot);
     buildAux(Array.isArray(json.config.aux) ? json.config.aux : []);
-    document.dispatchEvent(new Event("mixer-config-ready"));
     return;
   }
   if (typeof json.address !== "string" || !Array.isArray(json.args)) return;
@@ -395,7 +393,6 @@ function buildAux(options) {
 
 function buildChannels(channels) {
   channels = channels.filter(channel => channel.enabled !== false).sort((a, b) => (a.order ?? a.channel) - (b.order ?? b.channel));
-  defaultChannelOrder = channels.map(channel => String(channel.channel));
   if (channelSorter) channelSorter.destroy();
   clearPendingWrites();
   channelElements.clear();
@@ -449,7 +446,6 @@ function restoreChannelOrder() {
 
 function saveChannelOrder() {
   localStorage.setItem("channelLayout", JSON.stringify(Array.from(channelsDiv.children, row => row.dataset.channel)));
-  document.dispatchEvent(new Event("mixer-preferences-changed"));
 
 }
 
@@ -494,20 +490,17 @@ auxSelect.addEventListener("change", () => {
   const option = auxSelect.selectedOptions[0];
   if (option) document.body.style.setProperty("--tint", option.dataset.colour);
   restoreFavourites(); requestValues();
-  document.dispatchEvent(new Event("mixer-preferences-changed"));
 
 });
 favourites.addEventListener("change", () => {
   localStorage.setItem("aux" + auxSelect.value + "favChecked", String(favourites.checked));
   applyFavourites();
-  document.dispatchEvent(new Event("mixer-preferences-changed"));
 
 });
 channelsDiv.addEventListener("change", event => {
   if (event.target.name !== "fav[]") return;
   localStorage.setItem("aux" + auxSelect.value + "fav", Array.from(channelsDiv.querySelectorAll('input[name="fav[]"]:checked'), checkbox => checkbox.value).join(","));
   applyFavourites();
-  document.dispatchEvent(new Event("mixer-preferences-changed"));
 
 });
 function setEditingLayout(active) {
@@ -534,7 +527,7 @@ function startWebsocket() {
   clearTimeout(connectionTimer);
   ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host);
   const socket = ws;
-  socket.onopen = () => { if (ws === socket) { clearTimeout(connectionTimer); setConnectionStatus(true); sendDeviceUsername(socket); } };
+  socket.onopen = () => { if (ws === socket) { clearTimeout(connectionTimer); setConnectionStatus(true); sendDeviceNickname(socket); } };
   socket.onmessage = event => { if (ws === socket) onMessage(event); };
   socket.onerror = () => socket.close();
   socket.onclose = () => {
@@ -550,7 +543,7 @@ function startWebsocket() {
   connectionTimer = setTimeout(() => { if (ws === socket && socket.readyState === WebSocket.CONNECTING) socket.close(); }, 3000);
 }
 startWebsocket();
-document.addEventListener("device-username-changed", () => sendDeviceUsername(ws));
+document.addEventListener("device-nickname-changed", () => sendDeviceNickname(ws));
 
 const listViewButton = document.getElementById("listView");
 const gridViewButton = document.getElementById("gridView");
@@ -560,7 +553,6 @@ function setChannelView(view) {
   listViewButton.setAttribute("aria-pressed", String(!grid));
   gridViewButton.setAttribute("aria-pressed", String(grid));
   updateSortingMode();
-  document.dispatchEvent(new Event("mixer-preferences-changed"));
 }
 listViewButton.addEventListener("click", () => { localStorage.setItem("channelView", "list"); setChannelView("list"); });
 gridViewButton.addEventListener("click", () => { localStorage.setItem("channelView", "grid"); setChannelView("grid"); });
@@ -570,7 +562,6 @@ const compactModeButton = document.getElementById("compactMode");
 function setCompactMode(compact) {
   document.body.classList.toggle("compact-mode", compact);
   compactModeButton.setAttribute("aria-pressed", String(compact));
-  document.dispatchEvent(new Event("mixer-preferences-changed"));
 }
 compactModeButton.addEventListener("click", () => {
   const compact = !document.body.classList.contains("compact-mode");
