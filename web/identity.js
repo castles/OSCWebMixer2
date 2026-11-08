@@ -8,7 +8,7 @@ function sendDeviceUsername(socket) {
 }
 function updateUsernameLabel() {
   const name = getDeviceUsername();
-  document.getElementById("deviceUsernameLabel").textContent = name || "Profile";
+  document.getElementById("deviceUsernameLabel").textContent = name || "Nickname";
   document.getElementById("editUsername").setAttribute("aria-label", name ? "Open profile for " + name : "Open profile");
 }
 function finishUsernameChoice() { usernameOnboarding = false; profileDialog.close(); document.dispatchEvent(new Event("device-username-ready")); }
@@ -20,7 +20,7 @@ function prepareUsernameForm() {
 }
 function openUsernameDialog() {
   usernameOnboarding = true; prepareUsernameForm();
-  document.getElementById("profileTitle").textContent = "What should we call you?";
+  document.getElementById("profileTitle").textContent = "Nickname";
   document.getElementById("usernameForm").hidden = false;
   document.getElementById("profileTemplates").hidden = true;
   document.getElementById("closeProfile").hidden = false;
@@ -30,24 +30,30 @@ document.getElementById("editUsername").addEventListener("click", () => {
   usernameOnboarding = false; prepareUsernameForm();
   document.getElementById("usernameForm").hidden = false;
   document.getElementById("profileTemplates").hidden = false;
-  document.getElementById("profileTitle").textContent = "Your profile";
+  document.getElementById("profileTitle").textContent = "Device settings";
   profileDialog.showModal(); document.dispatchEvent(new Event("profile-opened"));
 });
 document.getElementById("closeProfile").addEventListener("click", () => { if (usernameOnboarding) finishUsernameChoice(); else profileDialog.close(); });
 document.getElementById("skipUsername").addEventListener("click", finishUsernameChoice);
-usernameInput.addEventListener("input", () => { document.getElementById("usernameSaved").hidden = true; document.getElementById("usernameError").textContent = ""; });
+function saveNickname() {
+  const name = usernameInput.value.normalize("NFKC").trim().replace(/\s+/g, " ");
+  if (name.length > 80 || /[\x00-\x1f\x7f]/.test(name)) {
+    document.getElementById("usernameError").textContent = "Use up to 80 characters.";
+    return;
+  }
+  try {
+    if (name) localStorage.setItem("deviceUsername", name);
+    else localStorage.removeItem("deviceUsername");
+    document.getElementById("usernameError").textContent = "";
+    updateUsernameLabel();
+    document.dispatchEvent(new Event("device-username-changed"));
+  } catch { document.getElementById("usernameError").textContent = "Could not save to this device."; }
+}
+usernameInput.addEventListener("input", saveNickname);
 profileDialog.addEventListener("cancel", event => { if (usernameOnboarding) { event.preventDefault(); finishUsernameChoice(); } });
 document.getElementById("usernameForm").addEventListener("submit", event => {
-  event.preventDefault();
-  const name = usernameInput.value.normalize("NFKC").trim().replace(/\s+/g, " ");
-  if (!name || name.length > 80 || /[\x00-\x1f\x7f]/.test(name)) {
-    document.getElementById("usernameError").textContent = "Use a username between 1 and 80 characters."; return;
-  }
-  localStorage.setItem("deviceUsername", name); updateUsernameLabel();
-  document.getElementById("usernameError").textContent = "";
-  if (usernameOnboarding) finishUsernameChoice();
-  else { const saved = document.getElementById("usernameSaved"); saved.textContent = "Username saved."; saved.hidden = false; }
-  document.dispatchEvent(new Event("device-username-changed"));
+  event.preventDefault(); saveNickname();
+  if (usernameOnboarding) finishUsernameChoice(); else profileDialog.close();
 });
 window.addEventListener("storage", event => {
   if (event.key === "deviceUsername" || event.key === null) { updateUsernameLabel(); document.dispatchEvent(new Event("device-username-changed")); }

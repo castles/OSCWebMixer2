@@ -11,7 +11,6 @@ const configManager = require("./lib/config/configManager.js")
 const logger = require('./lib/logging/logger.js');
 const { getMainIPAddress, generateColour } = require('./lib/utils/utils.js');
 const { createAdminAuth } = require('./lib/admin-session.js');
-const { createUserAccounts } = require('./lib/user-accounts.js');
 const { useTemplateRoutes, deviceUsername } = require('./lib/templates.js');
 const { dbToSlider, panToCentered, colourToRGB } = require('./lib/mix-values.js');
 const { QueryQueue } = require('./lib/query-queue.js');
@@ -21,7 +20,6 @@ const { normalizeMixerUrl } = require('./lib/mixer-url.js');
 const { advertiseMixer } = require('./lib/discovery.js');
 const discoveryStops = new Set();
 let adminAuth;
-let userAccounts;
 let discoveryTimer = null;
 let nextClientId = 1;
 let qrURL = null;
@@ -210,7 +208,6 @@ function startServer()
 	app.use(express.urlencoded({ extended: true }));
 	app.use(express.json());
 	adminAuth.register(app);
-	userAccounts.register(app, { adminAuth });
 	useTemplateRoutes(app);
 	// Only connection information, so the tray QR still works with an admin password.
 	app.get('/api/connection', async (req, res, next) => {
@@ -1243,8 +1240,6 @@ for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => {
 
 createAdminAuth().then(auth => {
 	adminAuth = auth;
-	userAccounts = createUserAccounts();
-	process.once('exit', () => userAccounts.close());
 	startServer();
 	startOSC();
 }).catch(error => { logger.error(error.stack || error); process.exit(1); });

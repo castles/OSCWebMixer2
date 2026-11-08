@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Remove musician accounts, passwords, account APIs and admin account management.
+- Save nicknames automatically on the device; keep mixer layouts in local browser storage.
+- Stop opening the legacy musician database. Existing database files are preserved.
+
 - Advertise the installed service and demo using Bonjour/mDNS for discovery by native mobile clients.
 - Include the actual HTTP port, refresh advertisements on network changes, and withdraw them on shutdown.
 - Exclude common virtual and link-local adapters from automatic mixer links and QR codes.
