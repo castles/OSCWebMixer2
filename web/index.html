@@ -14,7 +14,7 @@
       name="apple-mobile-web-app-status-bar-style"
       content="black"
     />
-    <link rel="stylesheet" href="mixer.min.css?v=2.8.0" />
+    <link rel="stylesheet" href="mixer.min.css?v=2.9.0" />
     <link rel="shortcut icon" href="/images/favicon.ico" type="image/x-icon" />
     <link rel="apple-touch-icon" href="/images/apple-touch-icon.png" />
     <link
@@ -72,13 +72,7 @@
       <div id="controlsBackdrop" class="controls-backdrop" hidden></div>
       <button id="controlsToggle" class="controls-toggle" type="button" aria-expanded="false" aria-controls="controlsFan" aria-label="Open mixer controls" title="Mixer controls"><svg class="app-icon controls-open-icon" aria-hidden="true"><use href="vendor/lucide.svg#slidersHorizontal"></use></svg><svg class="app-icon controls-close-icon" aria-hidden="true"><use href="vendor/lucide.svg#x"></use></svg></button>
       <div id="controlsFan" class="controls-fan" role="group" aria-label="Mixer controls" inert>
-        <div class="fan-action fan-fullscreen">
-          <button id="enterFullscreen" type="button" aria-label="Enter fullscreen" title="Enter fullscreen"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#maximize"></use></svg><span>Full screen</span></button>
-          <button id="exitFullscreen" type="button" aria-label="Exit fullscreen" title="Exit fullscreen" hidden><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#minimize"></use></svg><span>Exit fullscreen</span></button>
-        </div>
-        <button id="zeroAllChannels" class="fan-action fan-zero" type="button" disabled title="Set every enabled channel in this AUX mix to 0 dB, including channels hidden by Favourites"><strong>0 dB</strong><span>Set all to 0</span></button>
-        <button id="compactMode" class="fan-action fan-compact" type="button" aria-pressed="false"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#moveHorizontal"></use></svg><span>Compact</span></button>
-        <label class="favourites-toggle fan-action fan-favourites"><input id="favourites" type="checkbox"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#star"></use></svg><span>Favourites</span></label>
+        <button id="setAllLevelsOff" class="fan-action fan-off" type="button" disabled title="Set every channel in this AUX mix to off (−∞ dB)"><strong>−∞</strong><span>Set all levels to off</span></button>
         <button id="editLayout" class="fan-action fan-edit" type="button" aria-pressed="false" disabled><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#pencil"></use></svg><span>Edit layout</span></button>
         <button id="panMode" class="fan-action fan-pan" type="button" aria-pressed="false"><strong>Pan</strong></button>
         <button id="editNickname" class="fan-action fan-nickname" type="button" title="Nickname" aria-label="Set nickname"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#userRound"></use></svg><span id="nicknameLabel">Nickname</span></button>
@@ -94,7 +88,7 @@
     </div>
     <main id="channelsWrap" aria-label="Mix channels">
       <div id="channels"></div>
-      <p id="emptyChannels" hidden>No favourites yet. Turn off Favourites to star channels.</p>
+      <p id="emptyChannels" hidden>No channels configured for this mixer.</p>
     </main>
     <dialog id="nicknameDialog" class="settings-dialog" aria-labelledby="nicknameTitle">
       <div class="settings-dialog-header"><h2 id="nicknameTitle">Nickname</h2><button id="closeNickname" type="button" aria-label="Close nickname"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#x"></use></svg></button></div>
@@ -106,7 +100,7 @@
     </dialog>
     <script src="vendor/Sortable.min.js"></script>
     <script src="icons.js"></script>
-    <script src="identity.js?v=2.8.0"></script>
-    <script src="mixer.min.js?v=2.8.0"></script>
+    <script src="identity.js?v=2.9.0"></script>
+    <script src="mixer.min.js?v=2.9.0"></script>
   </body>
 </html>

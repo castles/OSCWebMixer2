@@ -58,11 +58,11 @@ The service is named **EarsMixer** in Windows Services. It starts automatically 
 
 ## Mixer and admin dashboard
 
-Musicians can choose list or grid views, reorder channels, save favourites and use compact or fullscreen controls. Guests keep their preferences on the current browser/device. Sign in to save a personal layout on the server and use it on another device.
+Musicians can choose list or grid views, reorder channels and set a local nickname. Preferences save on the current browser/device. Set all levels to off lowers every enabled channel’s send on the selected AUX to −∞ after confirmation; it does not toggle mute or change pan.
 
 To adjust a fader with a finger, mouse or pen, drag its handle. Tapping or swiping the fader track does not change the level, so you can scroll through the channels without jumping a fader. Keyboard and assistive-technology controls remain available.
 
-**Phone mixer** — compact mode keeps channel names, faders and favourites on one row, with the controls menu in the bottom-left corner:
+**Earlier web interface** — these screenshots show the previous interface, including controls removed from the current limited web mixer:
 
 <img src="docs/screenshots/mixer-phone.jpg" alt="EarsMixer in compact mode at phone size, with channel names, faders and favourites on one row" width="320">
 
@@ -84,7 +84,7 @@ To protect the dashboard, open **Admin → Config** and set an admin password of
 
 Musicians can enter an optional nickname in the mixer controls. It saves automatically on that device and identifies the live connection in the dashboard. No musician account or password is required.
 
-Selected AUX, channel order, favourites, view and compact mode are saved in browser storage, separately for each server origin. The native mobile app keeps its own device-local settings. Clearing browser storage or uninstalling the app removes those layouts. In the browser, audio levels and pan come from the desk and are never recalled from a saved layout. The mobile app also supports separately saved AUX level states with confirmed recall.
+Selected AUX, channel order and view are saved in browser storage, separately for each server origin. The native mobile app keeps its own device-local settings. Clearing browser storage or uninstalling the app removes those layouts. In the browser, audio levels and pan come from the desk and are never recalled from a saved layout. The mobile app also supports separately saved AUX level states with confirmed recall.
 
 The browser mixer is a limited alternative to the mobile app. Nicknames save automatically in browser storage and appear in live connection presence. Skipping the nickname is remembered. Templates can be selected in the mobile app and managed in the admin dashboard; the browser mixer has no template selection. The admin dashboard password still protects desk configuration.
 

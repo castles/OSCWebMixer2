@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.7.0 — 2026-11-08
+
+Windows product version: **1.7.0**. Node package version: **2.9.0**.
+
+- Remove favourites, compact mode and fullscreen controls from the web mixer, including per-channel stars and old favourite filtering.
+- Replace Set all to 0 dB with Set all levels to off. After confirmation, set every enabled channel's send on the selected AUX to −∞ (−150 dB), cancel pending drags and leave pan unchanged.
+
 ## 1.6.0 — 2026-11-08
 
 Windows product version: **1.6.0**. Node package version: **2.8.0**.
