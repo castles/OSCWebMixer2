@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.1 — 2026-11-09
+
+Windows product version: **1.7.1**. Node package version: **2.9.1**.
+
+- Allow browser clients such as Expo web to read connection information and shared templates across origins. Include read-only preflight support; admin APIs and credentialed requests are not enabled for CORS.
+
 ## 1.7.0 — 2026-11-08
 
 Windows product version: **1.7.0**. Node package version: **2.9.0**.

@@ -2,7 +2,7 @@
 
 EarsMixer connects DiGiCo SD Series and Quantum consoles to the [native EarsMixer mobile app](https://github.com/joeclack/EarsMixerApp) and a limited browser mixer. It includes an admin dashboard and a Windows service manager with a connection QR code. Musicians use optional device-local nicknames, without accounts or passwords.
 
-Current Windows/server release: **1.7.0**. Node package version: **2.9.0** (a separate upstream version series). The current mobile app is **0.11.0**; its recent visual and interaction changes do not require additional server changes.
+Current Windows/server release: **1.7.1**. Node package version: **2.9.1** (a separate upstream version series). The current mobile app is **0.11.0**; its recent visual and interaction changes do not require additional server changes.
 
 ## Mobile app and browser mixer
 
@@ -169,6 +169,8 @@ The offline demo listens on all network interfaces on port **8082** and prints m
 Set `OSC_WEBMIXER_PUBLIC_URL` to override the advertised links and QR code, for example if your computer has multiple network adapters. Set `OSC_WEBMIXER_DEV_BIND_ADDRESS=127.0.0.1` to restrict the demo to this computer.
 
 Run `npm test` to check the app and `npm run build` to regenerate its minified web assets.
+
+Expo web previews can connect directly to this server: connection information and shared template reads allow CORS without credentials. Admin APIs remain same-origin. WebSocket mixer connections use the same server address. Restart a running source server after updating to pick up these changes.
 
 To build the installer locally on Windows, install Inno Setup 6.7 or newer and run `npm run installer:windows`. The build uses the Windows .NET Framework C# compiler and downloads its packaging runtime and service wrapper when needed. Set `ISCC_PATH` or `CSC_PATH` if the build tools are installed in custom locations. The installer is written to `dist/`.
 
