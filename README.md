@@ -1,6 +1,26 @@
 # EarsMixer
 
-EarsMixer lets musicians control their own monitor mix from a phone, tablet or computer. It connects to DiGiCo SD Series and Quantum consoles and includes a browser-based mixer, an admin dashboard and a Windows service manager with a connection QR code.
+EarsMixer connects DiGiCo SD Series and Quantum consoles to the [native EarsMixer mobile app](https://github.com/joeclack/EarsMixerApp) and a limited browser mixer. It includes an admin dashboard and a Windows service manager with a connection QR code. Musicians use optional device-local nicknames, without accounts or passwords.
+
+Current Windows/server release: **1.7.0**. Node package version: **2.9.0** (a separate upstream version series). The current mobile app is **0.11.0**; its recent visual and interaction changes do not require additional server changes.
+
+## Mobile app and browser mixer
+
+The mobile app is the main musician interface. The server-hosted browser mixer remains available for anyone without the app.
+
+| Feature | Native mobile app | Server-hosted browser mixer |
+| --- | --- | --- |
+| Optional nickname saved on the device | Yes | Yes |
+| AUX selection, send level and pan | Yes | Yes |
+| Channel layout | Reorder channels; hide channels per AUX | Reorder, list/grid views |
+| Shared templates | Optional layout selection | No selection; administrators manage templates in the dashboard |
+| Cached channels and last-known values | Yes, while refreshing live values | Live desk values; layouts do not recall audio |
+| Saved level states per server/AUX | On the phone, with confirmation before recall | No |
+| Other users on the same AUX | Profile circles and nicknames | Nickname is shared with the server; no profile-circle display |
+| Set all levels to off | Yes, including hidden channels | Yes, for available channels |
+| Discovery, guided setup and gesture haptics | Native app features | Connect through the server URL or QR link |
+
+Mobile uses horizontal faders in portrait and a full-height vertical bank in landscape. Its textured console surfaces, sculpted illuminated handles, icon/splash, eased automatic fader movement and brief success feedback are implemented in the mobile repository. They do not change the browser mixer's appearance. See the [mobile README](https://github.com/joeclack/EarsMixerApp#readme) for setup, builds and device-local data behaviour.
 
 ## Install on Windows
 
@@ -38,7 +58,7 @@ If your network has a DNS name for the mixer, enter it in **Admin → Overview �
 
 ## Automatic discovery
 
-The Windows service and `npm run dev` advertise `_earsmixer._tcp.local` using Bonjour/mDNS. In a native EarsMixer app build, open **Connect → Nearby mixers** and select the server. The advertisement includes the actual web port, so the installed service and a demo on port 8082 appear separately. Account data is not advertised.
+The Windows service and `npm run dev` advertise `_earsmixer._tcp.local` using Bonjour/mDNS. In a native EarsMixer app build, open the **Wi-Fi button → Auto** and select a nearby server. The advertisement includes the actual web port, so the installed service and a demo on port 8082 appear separately.
 
 Discovery uses UDP 5353 on the local network. The installer’s existing private-network firewall rule permits it. Guest Wi-Fi isolation, VLAN boundaries or blocked multicast can prevent discovery; manual addresses and QR codes still work. Set `OSC_WEBMIXER_DISCOVERY=0` in the server environment to disable advertisements. A server bound only to loopback does not advertise on the LAN.
 
@@ -58,38 +78,54 @@ The service is named **EarsMixer** in Windows Services. It starts automatically 
 
 ## Mixer and admin dashboard
 
-Musicians can choose list or grid views, reorder channels and set a local nickname. Preferences save on the current browser/device. Set all levels to off lowers every enabled channel’s send on the selected AUX to −∞ after confirmation; it does not toggle mute or change pan.
+The browser mixer lets musicians choose an AUX, adjust send levels or pan, reorder channels, choose list/grid views and set a local nickname. Preferences save automatically in that browser. Favourites, compact mode, fullscreen and template selection are no longer offered in the browser mixer.
 
-To adjust a fader with a finger, mouse or pen, drag its handle. Tapping or swiping the fader track does not change the level, so you can scroll through the channels without jumping a fader. Keyboard and assistive-technology controls remain available.
+Drag the fader handle to adjust it with a finger, mouse or pen. Tapping or swiping the track does not jump the level, so the channel list can be scrolled safely. Keyboard and assistive-technology controls remain available.
 
-**Earlier web interface** — these screenshots show the previous interface, including controls removed from the current limited web mixer:
+**Set all levels to off** lowers every available channel's send on the selected AUX to −∞ (−150 dB) after confirmation. It changes send levels rather than toggling mute, and leaves pan unchanged. It does not reset the musician's layout.
 
-<img src="docs/screenshots/mixer-phone.jpg" alt="EarsMixer in compact mode at phone size, with channel names, faders and favourites on one row" width="320">
-
-**iPad mixer** — landscape grid view shows channels side by side in three columns:
-
-![EarsMixer at iPad landscape size, showing channel faders and favourites in a three-column grid](docs/screenshots/mixer-ipad.jpg)
-
-The admin dashboard provides connected-device status, activity history, a read-only live mix, channel/AUX configuration and starting templates for musicians. Templates save layout preferences, including channel order and favourites; loading one does not recall fader levels on the console.
+The admin dashboard provides connected-device status and nicknames, activity history, a read-only live mix, channel/AUX configuration and shared layout templates. Templates do not recall console levels. Musicians can select them in the mobile app; older favourites-based templates retain their visible-channel selection there.
 
 The admin overview, showing connection status, client counts and the mixer QR code:
 
 ![EarsMixer admin dashboard with connection status, client and channel counts, and a QR code for joining the mixer](docs/screenshots/admin-dashboard.jpg)
 
-Screenshots use the offline demo with sample console data. The mixer is shown at phone (393 × 852) and iPad landscape (1180 × 820) viewport sizes.
+This screenshot uses the offline server demo. Earlier mixer screenshots below are historical and include controls removed from the current web interface.
 
-To protect the dashboard, open **Admin → Config** and set an admin password of at least eight characters. Musicians can still access the mixer, and the tray QR code continues to work. Restarting the server clears admin sign-in sessions, so administrators will need to sign in again.
+<details>
+<summary>Earlier web mixer screenshots</summary>
 
-## Nicknames and local layouts
+<img src="docs/screenshots/mixer-phone.jpg" alt="Historical phone web mixer with the former compact and favourites controls" width="320">
 
-Musicians can enter an optional nickname in the mixer controls. It saves automatically on that device and identifies the live connection in the dashboard. No musician account or password is required.
+![Historical iPad web mixer with favourites controls in a three-column grid](docs/screenshots/mixer-ipad.jpg)
 
-Selected AUX, channel order and view are saved in browser storage, separately for each server origin. The native mobile app keeps its own device-local settings. Clearing browser storage or uninstalling the app removes those layouts. In the browser, audio levels and pan come from the desk and are never recalled from a saved layout. The mobile app also supports separately saved AUX level states with confirmed recall.
+</details>
 
-The browser mixer is a limited alternative to the mobile app. Nicknames save automatically in browser storage and appear in live connection presence. Skipping the nickname is remembered. Templates can be selected in the mobile app and managed in the admin dashboard; the browser mixer has no template selection. The admin dashboard password still protects desk configuration.
+To protect the dashboard, open **Admin → Config** and set an admin password of at least eight characters. Musicians can still access the mixer, and the tray QR code continues to work. Restarting the server clears admin sign-in sessions. This admin password is separate from musician nicknames.
 
-Existing `earsmixer.sqlite` files from previous releases are left untouched but are no longer opened or used. They can be removed by the administrator after taking any desired backup.
+## Nicknames, layouts and saved levels
 
+Musicians can enter an optional nickname. It saves automatically on that device and identifies the live connection in the dashboard and mobile AUX presence. Skipping the nickname is remembered. There are no musician accounts, passwords or server-side profile sign-ins.
+
+The browser stores its selected AUX, channel order and view separately for each server origin. The mobile app keeps its own device-local settings, per-server layouts, per-AUX hidden channels, cached channel values and saved send-level states. Layouts are not synchronised between devices. Clearing browser storage or uninstalling the app removes that device's data.
+
+Browser levels and pan come from the desk and are never recalled from a saved layout. Mobile cached values are also display-only while live values refresh. Separately, mobile edits save a level state per server/AUX. When live levels differ, the app offers **Keep desk levels** or **Load saved levels**; only confirming recall sends those saved levels to the desk. Pan is unchanged. Recent states are listed on the phone by AUX name and edit timestamp. Resetting mobile device data does not change the console's levels or pan.
+
+The built-in mobile demo has 20 channels and four AUXes and runs without a server. For testing an actual mobile-to-server connection, use this repository's network demo with 20 channels and eight AUXes, described below.
+
+Existing `earsmixer.sqlite` files from previous releases are left untouched but are no longer opened or used. Administrators can remove them after taking any desired backup. Shared templates and the admin password record remain server-side data.
+
+## AUX presence for mobile clients
+
+The server sends this message over the existing mixer WebSocket:
+
+```json
+{ "presence": { "aux": 2, "peers": [{ "id": "7", "nickname": "Joe" }] } }
+```
+
+Each list includes only other open musician connections on the selected AUX, including browser connections. It updates after AUX selection, nickname changes, joins and disconnects; an empty list clears the display. Admin observers are excluded. IDs last for that connection and nicknames may be null. The mobile app displays profile circles; the limited browser mixer does not display them. This requires server 1.5.0 (Node package 2.7.0) or newer.
+
+Live signal meters and channel colour accents are future mobile features, tracked in [EarsMixerApp #4](https://github.com/joeclack/EarsMixerApp/issues/4) and [#3](https://github.com/joeclack/EarsMixerApp/issues/3). They are not implemented in this server release; the console model/software and OSC data formats still need verification.
 
 ## Updates, settings and backups
 
@@ -147,7 +183,3 @@ Normal CI runs compile the installer and run the application tests, without inst
 ## Credits and licence
 
 EarsMixer is maintained by Joe Clack and is based on [OSCWebMixer2 by Marc Castles](https://github.com/castles/OSCWebMixer2). The project is distributed under the [MIT licence](LICENSE).
-
-## AUX presence for native clients
-
-The server sends `{ "presence": { "aux": 2, "peers": [{ "id": "7", "nickname": "Joe" }] } }` over the existing mixer WebSocket. Each list includes only other open musician connections on the selected AUX. It updates after AUX selection, nickname changes, joins and disconnects; an empty list clears the display. Admin observer connections are excluded. IDs last for that connection and nicknames may be null. The mobile app displays profile circles; existing web clients continue to work.
