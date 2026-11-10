@@ -84,6 +84,15 @@ test("offline v2: discovery, scoped clients, dashboard, templates, admin session
     assert.deepEqual(Object.keys(connection).sort(), ["qr", "url"]);
     assert.equal(connection.url, publicBase + "/");
     assert.match(connection.qr, /^data:image\/png;base64,/);
+    const browserHeaders = { Origin: "http://localhost:8081" };
+    const browserProbe = await fetch(base + "/api/connection", { headers: browserHeaders });
+    assert.equal(browserProbe.headers.get("access-control-allow-origin"), "*");
+    assert.deepEqual(Object.keys(await browserProbe.json()).sort(), ["qr", "url"]);
+    const browserTemplates = await fetch(base + "/api/templates", { headers: browserHeaders });
+    assert.equal(browserTemplates.headers.get("access-control-allow-origin"), "*");
+    assert.equal(browserTemplates.status, 200);
+    const browserAdmin = await fetch(base + "/api/admin/status", { headers: browserHeaders });
+    assert.equal(browserAdmin.headers.get("access-control-allow-origin"), null);
     assert.equal((await (await fetch(base + "/config")).json()).desk.ip, "127.0.0.1");
     const first = await connect(publicBase.replace("http:", "ws:")); clients.push(first);
     const second = await connect(base.replace("http:", "ws:")); clients.push(second);

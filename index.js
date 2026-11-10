@@ -18,6 +18,7 @@ const { productVersion } = require('./lib/product-info.js');
 const appVersion = productVersion();
 const { normalizeMixerUrl } = require('./lib/mixer-url.js');
 const { advertiseMixer } = require('./lib/discovery.js');
+const { musicianCors } = require('./lib/musician-cors.js');
 const { sendAuxPresence, broadcastAuxPresence } = require('./lib/aux-presence.js');
 const discoveryStops = new Set();
 let adminAuth;
@@ -206,6 +207,7 @@ function startServer()
 {
 	// Create an Express-based Web Socket server that clients can connect to
 	let app = express();
+	app.use(musicianCors);
 	app.use(express.urlencoded({ extended: true }));
 	app.use(express.json());
 	adminAuth.register(app);
