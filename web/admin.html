@@ -162,8 +162,20 @@
                     <label class="template-field">Starting view<select id="templateView"><option value="list">List</option><option value="grid">Grid on larger screens</option></select></label>
                   </div>
                   <label class="template-filter"><input id="templateFavouritesOnly" type="checkbox"> Start with favourites only for this AUX</label>
-                  <p class="muted">Drag to reorder and star favourites for each AUX. Arrow keys on a handle also move channels.</p>
+                  <p class="muted">Drag to reorder, star favourites and hide channels for each AUX. Arrow keys on a handle also move channels.</p>
                   <div id="templateChannels" aria-label="Template channels"></div>
+                  <section class="template-groups" aria-labelledby="templateGroupsTitle">
+                    <h3 id="templateGroupsTitle">Channel groups</h3>
+                    <p class="muted">Grouped channels move together on one fader in the mobile app. A channel can only be in one group, and each group needs at least two channels.</p>
+                    <div class="template-group-scope">
+                      <div class="template-group-scope-head"><h4 id="templateAuxGroupsTitle">This AUX mix</h4><button id="addAuxGroup" type="button">Add group</button></div>
+                      <div id="templateAuxGroups" aria-labelledby="templateAuxGroupsTitle"></div>
+                    </div>
+                    <div class="template-group-scope">
+                      <div class="template-group-scope-head"><h4 id="templateGlobalGroupsTitle">All AUX mixes</h4><button id="addGlobalGroup" type="button">Add group</button></div>
+                      <div id="templateGlobalGroups" aria-labelledby="templateGlobalGroupsTitle"></div>
+                    </div>
+                  </section>
                   <p id="templateSaveHint" class="muted"></p>
                   <button id="saveAdminTemplate" type="submit"><svg class="app-icon" aria-hidden="true"><use href="vendor/lucide.svg#save"></use></svg> Save template</button>
                 </fieldset>

@@ -203,9 +203,10 @@ test("offline v2: discovery, scoped clients, dashboard, templates, admin session
     const template = await response.json();
     assert.equal(template.createdBy, "Lead singer");
     assert.equal(template.updatedBy, "Lead singer");
-    assert.deepEqual(template.config, templateConfig);
+    const savedConfig = { ...templateConfig, hiddenByAux: {}, groupsByAux: {}, globalGroups: [] };
+    assert.deepEqual(template.config, savedConfig);
     assert(!("level" in template.config), "personal layouts must not store desk send values");
-    assert.deepEqual((await (await request("/api/templates/" + template.id)).json()).config, templateConfig);
+    assert.deepEqual((await (await request("/api/templates/" + template.id)).json()).config, savedConfig);
     assert((await (await request("/api/templates")).json()).templates.some(entry => entry.id === template.id));
 
     // Enable protection through the real running backend, then verify both dashboards

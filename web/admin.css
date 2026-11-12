@@ -163,6 +163,22 @@ tbody tr:last-child td { border-bottom: 0; }
 .template-star:has(input:checked) { color: #e6be6c; }
 .template-star:has(input:checked) .app-icon { fill: currentColor; }
 .template-star:has(input:focus-visible) { outline: 2px solid #a5c5ff; border-radius: 6px; }
+.template-hide { display: flex; align-items: center; gap: 6px; padding: 0 8px; min-height: 40px; font-size: 12px; color: #a8afb9; cursor: pointer; }
+.template-channel:has(.template-hide input:checked) .template-channel-name { color: #7f8998; text-decoration: line-through; }
+.template-groups { margin: 24px 0 16px; padding-top: 16px; border-top: 1px solid #30353e; }
+.template-groups h3 { margin: 0 0 6px; font-size: 15px; }
+.template-group-scope { margin-top: 16px; }
+.template-group-scope-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.template-group-scope-head h4 { margin: 0; font-size: 13px; color: #a8afb9; }
+.template-group { display: grid; gap: 10px; padding: 12px; margin-bottom: 8px; border: 1px solid #39414e; border-radius: 10px; background: #20252d; }
+.template-group-head { display: flex; align-items: center; gap: 10px; }
+.template-group-head input { flex: 1; min-width: 0; min-height: 40px; padding: 8px 10px; border: 1px solid #444b57; border-radius: 7px; color: #f3f4f6; background: #272c34; font-size: 14px; }
+.template-group-members { display: flex; flex-wrap: wrap; gap: 6px; }
+.template-group-member { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid #444b57; border-radius: 999px; font-size: 13px; cursor: pointer; }
+.template-group-member:has(input:checked) { border-color: #6fd6c8; background: #1d3a38; }
+.template-group-member:has(input:disabled) { opacity: 0.45; cursor: not-allowed; }
+.template-group-warning { margin: 0; font-size: 12px; color: #e6be6c; }
+.template-group-empty { margin: 0 0 8px; font-size: 13px; color: #7f8998; }
 .template-placeholder { opacity: 0.5; border: 2px dashed #a5c5ff; background: #253349; }
 .template-drag { box-shadow: 0 12px 30px #0008; }
 #adminTemplateMessage { font-size: 13px; color: #87d9b4; overflow-wrap: anywhere; }

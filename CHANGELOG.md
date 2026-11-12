@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Let shared templates carry hidden channels and channel groups for the mobile app. In the admin template editor, hide channels per AUX and create groups for one AUX mix or for all AUX mixes; a channel can only be in one group a mix can see, and each group needs at least two channels. The server validates these with the same rules as the app, and templates saved before this keep working.
+
 ## 1.7.1 — 2026-11-09
 
 Windows product version: **1.7.1**. Node package version: **2.9.1**.

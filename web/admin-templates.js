@@ -50,6 +50,71 @@ function draftAuxSettings() {
   if (!templateDraft.favouritesByAux[aux]) templateDraft.favouritesByAux[aux] = { channels: [], enabled: false };
   return templateDraft.favouritesByAux[aux];
 }
+function draftHidden() { return templateDraft.hiddenByAux[templateAuxInput.value] || []; }
+// Groups follow the mobile app's rules: unique IDs across all groups, and no
+// channel in more than one group a mix can see (its own groups plus the
+// all-mix groups). Channels used by a conflicting group are unavailable.
+function allTemplateGroups() { return [...templateDraft.globalGroups, ...Object.values(templateDraft.groupsByAux).flat()]; }
+function takenChannels(group, global) {
+  const others = global ? allTemplateGroups() : [...templateDraft.globalGroups, ...(templateDraft.groupsByAux[templateAuxInput.value] || [])];
+  return new Set(others.filter(entry => entry !== group).flatMap(entry => entry.members));
+}
+function addTemplateGroup(global) {
+  const id = Math.max(0, ...allTemplateGroups().map(group => group.id)) + 1;
+  const list = global ? templateDraft.globalGroups : (templateDraft.groupsByAux[templateAuxInput.value] ||= []);
+  list.push({ id, name: "", members: [] });
+  renderTemplateGroups();
+  document.querySelector('[data-group-id="' + id + '"] input')?.focus();
+}
+function templateGroupCard(group, list, global) {
+  const channels = new Map(templateChannels.map(channel => [channel.channel, channel]));
+  const order = [...templateDraft.channelOrder, ...channels.keys()].filter((id, index, ids) => channels.has(id) && ids.indexOf(id) === index);
+  const card = document.createElement("div"); card.className = "template-group"; card.dataset.groupId = String(group.id);
+  card.innerHTML = '<div class="template-group-head"><input maxlength="80" placeholder="Group name (optional)"><button type="button">Delete</button></div><div class="template-group-members"></div><p class="template-group-warning"></p>';
+  const name = card.querySelector("input"); name.value = group.name; name.setAttribute("aria-label", "Group name");
+  name.addEventListener("input", () => { group.name = name.value; });
+  card.querySelector("button").addEventListener("click", () => { list.splice(list.indexOf(group), 1); renderTemplateGroups(); });
+  card.querySelector("button").setAttribute("aria-label", "Delete group " + (group.name || group.id));
+  const members = card.querySelector(".template-group-members"), taken = takenChannels(group, global);
+  for (const id of order) {
+    const channel = channels.get(id), label = document.createElement("label"); label.className = "template-group-member";
+    label.innerHTML = '<input type="checkbox"><span></span>';
+    label.querySelector("span").textContent = channel.label || "Channel " + id;
+    const box = label.querySelector("input"); box.checked = group.members.includes(id); box.disabled = !box.checked && taken.has(id);
+    if (box.disabled) label.title = "Already in another group";
+    box.addEventListener("change", () => {
+      group.members = box.checked ? [...group.members, id] : group.members.filter(value => value !== id);
+      renderTemplateGroups();
+    });
+    members.appendChild(label);
+  }
+  card.querySelector(".template-group-warning").textContent = group.members.length < 2 ? "Choose at least two channels." : "";
+  return card;
+}
+function renderTemplateGroups() {
+  if (!templateDraft) return;
+  const aux = templateAuxes.find(entry => String(entry.channel) === templateAuxInput.value);
+  document.getElementById("templateAuxGroupsTitle").textContent = "This AUX mix" + (aux ? " (" + (aux.label || "AUX " + aux.channel) + ")" : "");
+  const scopes = [[document.getElementById("templateAuxGroups"), templateDraft.groupsByAux[templateAuxInput.value] || [], false],
+    [document.getElementById("templateGlobalGroups"), templateDraft.globalGroups, true]];
+  for (const [container, list, global] of scopes) {
+    container.replaceChildren(...list.map(group => templateGroupCard(group, global ? templateDraft.globalGroups : (templateDraft.groupsByAux[templateAuxInput.value] ||= []), global)));
+    if (!list.length) { const empty = document.createElement("p"); empty.className = "template-group-empty"; empty.textContent = "No groups."; container.appendChild(empty); }
+  }
+}
+function incompleteTemplateGroup() {
+  const group = allTemplateGroups().find(entry => entry.members.length < 2);
+  return group ? "Group “" + (group.name.trim() || "Untitled") + "” needs at least two channels, or delete it." : "";
+}
+// Drop empty per-AUX entries so saved templates stay tidy.
+function templateSaveConfig() {
+  const config = JSON.parse(JSON.stringify(templateDraft));
+  for (const [aux, channels] of Object.entries(config.hiddenByAux)) if (!channels.length) delete config.hiddenByAux[aux];
+  for (const [aux, groups] of Object.entries(config.groupsByAux)) if (!groups.length) delete config.groupsByAux[aux];
+  return config;
+}
+document.getElementById("addAuxGroup").addEventListener("click", () => addTemplateGroup(false));
+document.getElementById("addGlobalGroup").addEventListener("click", () => addTemplateGroup(true));
 function saveDraftOrder() { if (templateDraft) templateDraft.channelOrder = Array.from(templateRows.children, row => Number(row.dataset.channel)); }
 function renderTemplateChannels() {
   if (!templateDraft) return;
@@ -60,20 +125,24 @@ function renderTemplateChannels() {
   const settings = draftAuxSettings(); templateFilterInput.checked = settings.enabled;
   for (const id of order) {
     const channel = channels.get(id), row = document.createElement("div"); row.className = "template-channel"; row.dataset.channel = String(id);
-    row.innerHTML = '<button type="button" class="template-drag-handle">' + appIcon("gripVertical") + '</button><span class="template-channel-name"></span><label class="template-star"><input type="checkbox">' + appIcon("star") + '</label>';
+    row.innerHTML = '<button type="button" class="template-drag-handle">' + appIcon("gripVertical") + '</button><span class="template-channel-name"></span><label class="template-hide"><input type="checkbox"> Hidden</label><label class="template-star"><input type="checkbox">' + appIcon("star") + '</label>';
     row.querySelector(".template-channel-name").textContent = channel.label || "Channel " + id;
     const handle = row.querySelector("button"); handle.setAttribute("aria-label", "Move " + (channel.label || "Channel " + id)); handle.addEventListener("keydown", moveTemplateChannel);
-    const star = row.querySelector("input"); star.checked = settings.channels.includes(id); star.setAttribute("aria-label", "Favourite " + (channel.label || "Channel " + id));
-    star.addEventListener("change", () => { settings.channels = Array.from(templateRows.querySelectorAll('input:checked'), input => Number(input.closest(".template-channel").dataset.channel)); });
+    const hide = row.querySelector(".template-hide input"), hidden = draftHidden();
+    hide.checked = hidden.includes(id); hide.setAttribute("aria-label", "Hide " + (channel.label || "Channel " + id) + " in this AUX");
+    hide.addEventListener("change", () => { const list = draftHidden(); const next = list.filter(value => value !== id); if (hide.checked) next.push(id); templateDraft.hiddenByAux[templateAuxInput.value] = next; });
+    const star = row.querySelector(".template-star input"); star.checked = settings.channels.includes(id); star.setAttribute("aria-label", "Favourite " + (channel.label || "Channel " + id));
+    star.addEventListener("change", () => { settings.channels = Array.from(templateRows.querySelectorAll('.template-star input:checked'), input => Number(input.closest(".template-channel").dataset.channel)); });
     templateRows.appendChild(row);
   }
   saveDraftOrder();
-  templateSorter = new Sortable(templateRows, { draggable: "> .template-channel", handle: ".template-drag-handle", filter: ".template-star", preventOnFilter: false,
+  templateSorter = new Sortable(templateRows, { draggable: "> .template-channel", handle: ".template-drag-handle", filter: ".template-star, .template-hide", preventOnFilter: false,
     animation: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 180,
     direction: () => getComputedStyle(templateRows).gridTemplateColumns.split(" ").length > 1 ? "horizontal" : "vertical",
     ghostClass: "template-placeholder", dragClass: "template-drag", forceFallback: true, fallbackOnBody: true, fallbackTolerance: 4, onEnd: saveDraftOrder });
   templateRows.classList.toggle("template-grid", templateDraft.view === "grid");
   updateTemplateSortingMode();
+  renderTemplateGroups();
   updateAdminTemplateControls();
 }
 function updateTemplateSortingMode() {
@@ -90,6 +159,7 @@ function moveTemplateChannel(event) {
 }
 function showTemplateDraft(name, config) {
   templateNameInput.value = name; templateDraft = JSON.parse(JSON.stringify(config));
+  templateDraft.hiddenByAux ||= {}; templateDraft.groupsByAux ||= {}; templateDraft.globalGroups ||= [];
   templateAuxInput.replaceChildren();
   for (const aux of templateAuxes) templateAuxInput.add(new Option(aux.label || "AUX " + aux.channel, String(aux.channel)));
   if (templateAuxes.some(aux => aux.channel === templateDraft.selectedAux)) templateAuxInput.value = String(templateDraft.selectedAux);
@@ -105,7 +175,7 @@ document.addEventListener("admin-mixer-config", event => {
   updateAdminTemplateControls();
 });
 document.getElementById("newTemplate").addEventListener("click", () => {
-  showTemplateDraft("", { selectedAux: templateAuxes[0]?.channel || null, channelOrder: [], favouritesByAux: {}, view: "list" });
+  showTemplateDraft("", { selectedAux: templateAuxes[0]?.channel || null, channelOrder: [], favouritesByAux: {}, hiddenByAux: {}, groupsByAux: {}, globalGroups: [], view: "list" });
   adminTemplateMessage(""); templateNameInput.focus();
 });
 document.getElementById("editSavedTemplate").addEventListener("click", async () => {
@@ -143,9 +213,11 @@ templateViewInput.addEventListener("change", () => { templateDraft.view = templa
 templateFilterInput.addEventListener("change", () => { draftAuxSettings().enabled = templateFilterInput.checked; });
 templateEditor.addEventListener("submit", async event => {
   event.preventDefault(); if (!templateDraft || adminTemplateBusy) return;
+  const incomplete = incompleteTemplateGroup();
+  if (incomplete) { adminTemplateMessage(incomplete, true); return; }
   adminTemplateBusy = true; updateAdminTemplateControls(); adminTemplateMessage("");
   try {
-    const template = await adminTemplateRequest("/api/admin/templates", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: templateNameInput.value, username: templateAuthorInput.value, config: templateDraft }) });
+    const template = await adminTemplateRequest("/api/admin/templates", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: templateNameInput.value, username: templateAuthorInput.value, config: templateSaveConfig() }) });
     localStorage.setItem("templateAdminName", templateAuthorInput.value); templateNameInput.value = template.name;
     document.getElementById("templateEditorTitle").textContent = "Edit template";
     adminTemplateMessage("Saved “" + template.name + "”.");
