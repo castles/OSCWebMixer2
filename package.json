@@ -33,7 +33,7 @@
         "esbuild": "0.28.2"
     },
     "dependencies": {
-        "colortranslator": "^6.1.1",
+        "colortranslator": "^6.1.3",
         "express": "^4.22.1",
         "ora": "^5.4.1",
         "osc": "github:castles/osc.js",
